@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useEco } from '@/src/context/EcoContext';
 import { SAMPLE_TRASH_ITEMS } from '@/src/data/mockData';
 import { UpcycleProjectResult } from '@/src/types';
@@ -19,7 +19,11 @@ import {
   RefreshCw,
   Sliders,
   ChevronRight,
-  Info
+  Info,
+  SwitchCamera,
+  X,
+  Zap,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export default function WasteToWorthScanner() {
@@ -35,7 +39,111 @@ export default function WasteToWorthScanner() {
   const [checkedMaterials, setCheckedMaterials] = useState<string[]>([]);
   const [isClaimed, setIsClaimed] = useState(false);
 
+  // Camera State
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Clean up media stream when component unmounts or camera closes
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraActive(false);
+    setCameraError(null);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, [stopCamera]);
+
+  // Check available camera devices
+  useEffect(() => {
+    if (navigator?.mediaDevices?.enumerateDevices) {
+      navigator.mediaDevices.enumerateDevices()
+        .then((devices) => {
+          const videoDevices = devices.filter((device) => device.kind === 'videoinput');
+          if (videoDevices.length > 1) {
+            setHasMultipleCameras(true);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  const startCamera = async (facing: 'environment' | 'user' = cameraFacing) => {
+    setCameraError(null);
+    stopCamera();
+
+    try {
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        throw new Error('Fitur kamera tidak didukung di browser ini. Silakan gunakan upload foto.');
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: facing,
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setIsCameraActive(true);
+    } catch (err: any) {
+      console.error('Camera error:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setCameraError('Izin akses kamera ditolak. Silakan izinkan akses kamera di pengaturan browser atau gunakan tombol upload file.');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setCameraError('Kamera tidak ditemukan pada perangkat ini. Silakan gunakan tombol upload file.');
+      } else {
+        setCameraError('Gagal membuka kamera. Silakan coba lagi atau gunakan upload file.');
+      }
+      setIsCameraActive(false);
+    }
+  };
+
+  const flipCamera = () => {
+    const nextFacing = cameraFacing === 'environment' ? 'user' : 'environment';
+    setCameraFacing(nextFacing);
+    startCamera(nextFacing);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current || document.createElement('canvas');
+
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      // If front camera, flip horizontally for mirror effect
+      if (cameraFacing === 'user') {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+      setSelectedImage(dataUrl);
+      stopCamera();
+    }
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -43,6 +151,7 @@ export default function WasteToWorthScanner() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
+        stopCamera();
       };
       reader.readAsDataURL(file);
     }
@@ -51,11 +160,12 @@ export default function WasteToWorthScanner() {
   const handleSelectSample = (sample: typeof SAMPLE_TRASH_ITEMS[0]) => {
     setPrompt(sample.samplePrompt);
     setSelectedImage(null);
+    stopCamera();
   };
 
   const handleGenerate = async () => {
     if (!prompt.trim() && !selectedImage) {
-      setError('Pilih sampel sampah atau tulis deskripsi barang bekas yang ingin di-upcycle.');
+      setError('Ambil foto sampah dengan kamera, upload gambar, atau pilih salah satu sampel sampah di bawah.');
       return;
     }
 
@@ -127,6 +237,9 @@ export default function WasteToWorthScanner() {
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+      {/* Hidden Canvas for Video Snapshots */}
+      <canvas ref={canvasRef} className="hidden" />
+
       {/* Studio Header */}
       <div className="bg-[#FAF8F5] rounded-[28px] p-6 sm:p-8 shadow-clay-card border border-white">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -139,7 +252,7 @@ export default function WasteToWorthScanner() {
               Scan Sampah, Sulap Jadi Produk Keren
             </h2>
             <p className="text-sm sm:text-base text-[#1A4D3A]/70 max-w-2xl">
-              Foto atau pilih barang bekas di sekitarmu (jeans sobek, botol boba, kardus). AI kami akan merancang resep DIY upcycle langkah-demi-langkah sesuai skill levelmu!
+              Gunakan kamera ponsel/laptop untuk memindai sampah langsung, atau upload foto barang bekas (jeans sobek, botol boba, kardus). AI kami akan merancang resep DIY upcycle langkah-demi-langkah bernilai jual!
             </p>
           </div>
 
@@ -156,66 +269,191 @@ export default function WasteToWorthScanner() {
 
         {/* Input Interface */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
-          {/* Left Column: Image or Photo Upload */}
+          {/* Left Column: Camera Scanner & Upload */}
           <div className="lg:col-span-5 space-y-4">
-            <label className="block text-xs font-extrabold text-[#1A4D3A] uppercase tracking-wider">
-              1. Upload Foto Sampah / Ambil Gambar (Opsional)
-            </label>
-
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className={`relative border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
-                selectedImage 
-                  ? 'border-[#357A59] bg-[#EBF4EE]' 
-                  : 'border-[#1A4D3A]/20 bg-[#F5F2ED] hover:bg-[#EAE5DC]'
-              }`}
-            >
-              <input 
-                ref={fileInputRef}
-                type="file" 
-                accept="image/*" 
-                onChange={handleImageUpload} 
-                className="hidden" 
-              />
-
-              {selectedImage ? (
-                <div className="space-y-3">
-                  <div className="relative w-full h-44 rounded-xl overflow-hidden shadow-clay-card border border-white">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src={selectedImage} 
-                      alt="Barang yang diupload" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedImage(null);
-                    }}
-                    className="text-xs font-bold text-[#DC2626] hover:underline"
-                  >
-                    Hapus / Ganti Foto
-                  </button>
-                </div>
-              ) : (
-                <div className="py-4 space-y-2">
-                  <div className="w-12 h-12 rounded-2xl bg-[#FAF8F5] text-[#357A59] flex items-center justify-center mx-auto shadow-clay-button">
-                    <Upload className="w-6 h-6" />
-                  </div>
-                  <p className="text-xs font-bold text-[#1A4D3A]">
-                    Klik untuk upload foto barang bekas
-                  </p>
-                  <p className="text-[11px] text-[#1A4D3A]/60">
-                    PNG, JPG, atau WebP (Max 5MB)
-                  </p>
-                </div>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-extrabold text-[#1A4D3A] uppercase tracking-wider">
+                1. Scan Kamera / Upload Foto Sampah
+              </label>
+              {selectedImage && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedImage(null)}
+                  className="text-xs font-bold text-[#DC2626] hover:underline"
+                >
+                  Hapus Foto
+                </button>
               )}
             </div>
 
+            {/* Hidden File Input */}
+            <input 
+              ref={fileInputRef}
+              type="file" 
+              accept="image/*" 
+              onChange={handleImageUpload} 
+              className="hidden" 
+            />
+
+            {/* LIVE CAMERA VIEWFINDER */}
+            {isCameraActive ? (
+              <div className="relative rounded-2xl overflow-hidden shadow-clay-card border-2 border-[#357A59] bg-black aspect-video flex flex-col justify-between">
+                {/* Live Video Feed */}
+                <video
+                  ref={videoRef}
+                  playsInline
+                  autoPlay
+                  muted
+                  className={`w-full h-full object-cover ${cameraFacing === 'user' ? 'scale-x-[-1]' : ''}`}
+                />
+
+                {/* Animated Scanner Laser Overlay */}
+                <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4">
+                  {/* Corner Guides */}
+                  <div className="flex justify-between">
+                    <div className="w-6 h-6 border-t-2 border-l-2 border-[#6DB677] rounded-tl-lg" />
+                    <div className="w-6 h-6 border-t-2 border-r-2 border-[#6DB677] rounded-tr-lg" />
+                  </div>
+
+                  {/* Scanning Bar Animation */}
+                  <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-[#6DB677] to-transparent shadow-[0_0_8px_#6DB677] animate-pulse my-auto" />
+
+                  <div className="flex justify-between items-end">
+                    <div className="w-6 h-6 border-b-2 border-l-2 border-[#6DB677] rounded-bl-lg" />
+                    <span className="text-[10px] font-bold text-white bg-black/60 px-2 py-0.5 rounded-full backdrop-blur-sm">
+                      Arahkan kamera ke sampah
+                    </span>
+                    <div className="w-6 h-6 border-b-2 border-r-2 border-[#6DB677] rounded-br-lg" />
+                  </div>
+                </div>
+
+                {/* Top Camera Controls */}
+                <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+                  {hasMultipleCameras && (
+                    <button
+                      type="button"
+                      onClick={flipCamera}
+                      title="Ganti Kamera (Depan/Belakang)"
+                      className="p-2 rounded-full bg-black/60 text-white backdrop-blur-md hover:bg-black/80 transition-all cursor-pointer"
+                    >
+                      <SwitchCamera className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    title="Tutup Kamera"
+                    className="p-2 rounded-full bg-black/60 text-white backdrop-blur-md hover:bg-black/80 transition-all cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Bottom Snapshot Button Bar */}
+                <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-3 z-10">
+                  <button
+                    type="button"
+                    onClick={capturePhoto}
+                    id="btn-capture-camera"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-earth text-white font-bold text-xs shadow-clay-green hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <div className="w-3 h-3 rounded-full bg-[#FF9E20] animate-ping" />
+                    <Camera className="w-4 h-4" />
+                    <span>Ambil Foto Sampah</span>
+                  </button>
+                </div>
+              </div>
+            ) : selectedImage ? (
+              /* IMAGE PREVIEW AFTER CAPTURE / UPLOAD */
+              <div className="space-y-3">
+                <div className="relative w-full h-48 rounded-2xl overflow-hidden shadow-clay-card border border-white bg-[#EAE5DC]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src={selectedImage} 
+                    alt="Barang yang diupload / difoto" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2.5 left-2.5 bg-[#FAF8F5]/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-extrabold text-[#357A59] shadow-sm flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#357A59]" />
+                    <span>Foto Siap Dianalisis AI</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => startCamera('environment')}
+                    className="flex-1 py-2 px-3 rounded-xl bg-[#FAF8F5] border border-white text-xs font-bold text-[#1A4D3A] shadow-clay-button hover:bg-[#EDE8E0] flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-[#357A59]" />
+                    <span>Foto Ulang Kamera</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 py-2 px-3 rounded-xl bg-[#FAF8F5] border border-white text-xs font-bold text-[#1A4D3A] shadow-clay-button hover:bg-[#EDE8E0] flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-[#357A59]" />
+                    <span>Ganti File</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* DEFAULT CHOOSE CAMERA OR UPLOAD PANEL */
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Option A: Buka Kamera Langsung */}
+                  <button
+                    type="button"
+                    id="btn-open-camera"
+                    onClick={() => startCamera('environment')}
+                    className="p-5 rounded-2xl bg-[#EBF4EE] border-2 border-[#6DB677]/40 text-center hover:bg-[#DDF0E2] transition-all group flex flex-col items-center justify-center gap-2 shadow-clay-button cursor-pointer"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-earth text-white flex items-center justify-center shadow-clay-green group-hover:scale-110 transition-transform">
+                      <Camera className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-extrabold text-[#1A4D3A]">
+                        Buka Kamera
+                      </p>
+                      <p className="text-[10px] text-[#357A59] font-semibold">
+                        Scan Langsung
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Option B: Upload File Gambar */}
+                  <button
+                    type="button"
+                    id="btn-upload-file"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-5 rounded-2xl bg-[#FAF8F5] border-2 border-dashed border-[#1A4D3A]/20 text-center hover:bg-[#EAE5DC] transition-all group flex flex-col items-center justify-center gap-2 shadow-clay-card cursor-pointer"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-[#FAF8F5] text-[#357A59] flex items-center justify-center shadow-clay-button group-hover:scale-110 transition-transform">
+                      <Upload className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-extrabold text-[#1A4D3A]">
+                        Upload Galeri
+                      </p>
+                      <p className="text-[10px] text-[#1A4D3A]/60 font-semibold">
+                        JPG, PNG, WebP
+                      </p>
+                    </div>
+                  </button>
+                </div>
+
+                {cameraError && (
+                  <div className="p-3 rounded-xl bg-[#FDE8E8] border border-[#DC2626]/30 text-[#DC2626] text-xs font-medium flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>{cameraError}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Quick Sample Selector */}
-            <div className="space-y-2">
+            <div className="space-y-2 pt-1">
               <label className="block text-xs font-extrabold text-[#1A4D3A] uppercase tracking-wider">
                 Atau Pilih Sampel Sampah Populer:
               </label>
