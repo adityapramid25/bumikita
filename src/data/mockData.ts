@@ -388,11 +388,32 @@ export const INITIAL_DROPOFF_LOCATIONS: DropoffLocation[] = [
 
 export const SAMPLE_TRASH_ITEMS = [
   {
+    name: 'Botol Plastik Bekas Air Mineral (PET 600ml/1.5L)',
+    category: 'Plastic',
+    icon: 'CupSoda',
+    description: 'Botol plastik transparan, kedap air, bersih',
+    samplePrompt: 'Saya punya 2 botol plastik bekas air mineral ukuran 600ml. Saya ingin membuat pot tanaman self-watering atau wadah pensil estetik untuk meja belajar.',
+  },
+  {
     name: 'Old Denim Jeans / Celana Levis Rusak',
     category: 'Textile',
     icon: 'Scissors',
     description: 'Robek di lutut, saku sobek, atau kekecilan',
-    samplePrompt: 'Saya punya 1 celana jeans bekas yang robek di bagian paha dan sudah kekecilan. Saya ingin upcycle jadi barang keren untuk mahasiswa kuliah tanpa butuh mesin jahit rumit.',
+    samplePrompt: 'Saya punya 1 celana jeans bekas yang robek di bagian paha dan sudah kekecilan. Saya ingin upcycle jadi tas selempang gadget keren untuk mahasiswa kuliah tanpa butuh mesin jahit rumit.',
+  },
+  {
+    name: 'Cardboard Delivery Boxes / Kardus Sepatu & Paket',
+    category: 'Paper',
+    icon: 'Package',
+    description: 'Kardus cokelat kurir e-commerce & kotak sepatu',
+    samplePrompt: 'Saya punya kotak kardus sepatu tebal dan kardus paket kurir. Mau dibuat jadi organizer meja multifungsi dengan charging dock.',
+  },
+  {
+    name: 'Kaleng Minuman Aluminium / Biskuit',
+    category: 'Metal',
+    icon: 'Sparkles',
+    description: 'Kaleng silinder kokoh, tahan panas',
+    samplePrompt: 'Saya punya 2 kaleng minuman aluminium bekas. Ingin diubah menjadi lampu meja belajar aksen industrial minimalis atau pen holder.',
   },
   {
     name: 'Boba Plastic Cups & Straws',
@@ -402,24 +423,10 @@ export const SAMPLE_TRASH_ITEMS = [
     samplePrompt: 'Saya punya 4 gelas cup boba plastik tebal lengkap dengan tutup dome dan sedotan. Bagaimana cara upcycle jadi organizer meja kamar kos yang estetik?',
   },
   {
-    name: 'Cardboard Delivery Boxes / Kardus Paket',
-    category: 'Paper',
-    icon: 'Package',
-    description: 'Kardus cokelat kurir e-commerce berbagai ukuran',
-    samplePrompt: 'Saya punya 3 kardus paket e-commerce ukuran sedang dan lakban kertas. Mau dibuat jadi rak buku meja mini atau storage aesthetic.',
-  },
-  {
     name: 'T-Shirts & Kain Perca / Kaos Oblong',
     category: 'Textile',
     icon: 'Shirt',
     description: 'Kaos sablon lama bernoda atau melar',
     samplePrompt: 'Saya punya 2 kaos oblong katun lama yang bernoda di kerah. Ingin dibuat totebag belanja tanpa jahit atau sarung bantal estetik.',
-  },
-  {
-    name: 'Cracked Skateboard Deck / Papan Kayu Bekas',
-    category: 'Wood',
-    icon: 'Layers',
-    description: 'Papan skateboard retak atau potongan kayu palet',
-    samplePrompt: 'Saya punya 1 papan skateboard kayu retak yang grafisnya masih keren. Mau upcycle jadi rak dinding floating estetik untuk kamar tidur.',
   },
 ];

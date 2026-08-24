@@ -5,66 +5,11 @@ import { Type } from '@google/genai';
 function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) {
   const p = (promptText || '').toLowerCase();
   
-  if (p.includes('jeans') || p.includes('celana') || p.includes('denim') || p.includes('kain') || p.includes('baju') || p.includes('kaos') || p.includes('tas') || p.includes('pouch') || p.includes('fashion') || p.includes('selempang')) {
-    return {
-      detectedItemName: 'Celana Jeans Denim Bekas & Kain Perca',
-      detectedMaterialType: 'Heavy Denim Cotton 100% Recyclable',
-      detectedCondition: 'Serat kain kuat & tebal, cocok untuk jahitan struktur tas tanpa perlu furing tebal tambahan.',
-      projectName: 'Upcycled Patchwork Denim Tech Sling & Campus Pouch',
-      tagline: 'Tas selempang streetwear utilitarian beraksen saku vintage untuk menyimpan HP, dompet, dan TWS.',
-      vibe: 'Y2K Gorpcore & Urban Streetwear',
-      productDescription: 'Tas selempang multifungsi berukuran 22 x 16 cm dengan 2 kompartemen utama. Menggunakan saku asli jeans sebagai slot kartu cepat, strap adjustable dari waistband, serta penutup magnetik/kancing untuk melindungi gadget saat bepergian ke kampus.',
-      difficulty: skillLevel === 'Beginner' ? 'Super Easy (Tanpa Jahit / Lem Kain)' : 'Moderate (Crafty Stitching)',
-      timeEstimate: skillLevel === 'Beginner' ? '15-20 Menit' : '25-35 Menit',
-      estimatedValueIdr: 85000,
-      co2SavedKg: 4.8,
-      landfillDivertedGrams: 420,
-      pointsRewarded: 85,
-      benefits: {
-        economic: 'Menghemat pengeluaran belanja tas selempang baru senilai Rp 85.000 - Rp 150.000 di toko ritel.',
-        environmental: 'Mencegah 420 gram serat tekstil sintetis/katun menumpuk puluhan tahun di TPA dan menghemat ~2.000 liter air dari konsumsi pakaian baru.',
-        practical: 'Menghasilkan tas gadget tangguh tahan gesek dengan saku akses instan untuk kartu e-money dan earphone.',
-      },
-      requiredMaterials: [
-        '1 potong bagian kaki atau saku celana jeans bekas dari foto',
-        'Waistband (ban pinggang) celana atau tali hoodie bekas untuk strap selempang',
-        '1 buah kancing cadangan / magnet penutup atau perekat velcro',
-        'Kain perca tipis (opsional untuk lapisan dalam/furing)',
-      ],
-      toolsNeeded: ['Gunting kain tajam', 'Penggaris & kapur penanda', skillLevel === 'Beginner' ? 'Lem kain tahan cuci (fabric glue)' : 'Jarum jahit & benang jeans no. 30'],
-      steps: [
-        {
-          stepNumber: 1,
-          title: 'Pemotongan & Pemetaan Pola Kantong',
-          instruction: 'Potong bagian saku belakang celana jeans dengan menyisakan 2 cm keliling kain di sekitarnya untuk kampuh jahitan/rekat. Potong persegi panjang 24 x 18 cm dari potongan kaki celana untuk badan tas.',
-          tip: 'Pertahankan jahitan asli saku untuk memberikan estetika deconstructed vintage yang bernilai jual tinggi.',
-          timeMinutes: 5,
-        },
-        {
-          stepNumber: 2,
-          title: 'Pemasangan Tali Selempang (Strap)',
-          instruction: 'Gunting ban pinggang jeans (waistband) memanjang. Pasang kedua ujungnya di sisi dalam kanan dan kiri badan tas menggunakan jahitan silang kotak ganda atau lem kain kuat.',
-          tip: 'Gunakan simpul silang ganda agar strap kuat menopang beban HP berat dan dompet.',
-          timeMinutes: 8,
-        },
-        {
-          stepNumber: 3,
-          title: 'Finishing & Detail Kancing Magnet',
-          instruction: 'Lipat bagian penutup atas (flap) sebesar 5 cm ke arah depan. Pasangkan kancing atau magnet di bagian dalam flap dan badan tas. Tambahkan raw-hem (rumbai benang) pada tepian bawah untuk sentuhan edgy.',
-          tip: 'Semprotkan sedikit lilin lebah (beeswax) tipis pada permukaan luar jika ingin efek water-repellent.',
-          timeMinutes: 7,
-        },
-      ],
-      stylingTips: 'Padukan dengan oversized graphic t-shirt dan sneakers. Pasangkan gantungan carabiner metalik pada loop sabuk tas untuk menonjolkan estetika gorpcore modern.',
-      safetyNote: 'Hati-hati saat menggunting sambungan jahitan denim yang tebal agar gunting tidak meleset.',
-    };
-  }
-
-  if (p.includes('botol') || p.includes('plastik') || p.includes('pet') || p.includes('cup') || p.includes('boba') || p.includes('gelas') || p.includes('pot') || p.includes('tanaman')) {
+  if (p.includes('botol') || p.includes('plastik') || p.includes('pet') || p.includes('cup') || p.includes('boba') || p.includes('gelas') || p.includes('pot') || p.includes('tanaman') || p.includes('air mineral')) {
     return {
       detectedItemName: 'Botol Plastik PET 600ml / Cup Minuman Plastik',
       detectedMaterialType: 'Polyethylene Terephthalate (PET #1) Food Grade',
-      detectedCondition: 'Wadah plastik transparan utuh, kedap air, sangat ideal untuk media hidroponik kapiler.',
+      detectedCondition: 'Wadah plastik transparan utuh, kedap air, sangat ideal untuk media hidroponik kapiler atau organizer.',
       projectName: 'Self-Watering Minimalist Desk Planter & Stationery Pot',
       tagline: 'Pot tanaman estetik dengan sistem irigasi kapiler otomatis anti-layu untuk meja belajar & kamar kost.',
       vibe: 'Clean Minimalist & Biophilic Workspace',
@@ -170,6 +115,111 @@ function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) 
     };
   }
 
+  if (p.includes('jeans') || p.includes('celana') || p.includes('denim') || p.includes('kain') || p.includes('baju') || p.includes('kaos') || p.includes('tas') || p.includes('pouch') || p.includes('fashion') || p.includes('selempang')) {
+    return {
+      detectedItemName: 'Celana Jeans Denim Bekas & Kain Perca',
+      detectedMaterialType: 'Heavy Denim Cotton 100% Recyclable',
+      detectedCondition: 'Serat kain kuat & tebal, cocok untuk jahitan struktur tas tanpa perlu furing tebal tambahan.',
+      projectName: 'Upcycled Patchwork Denim Tech Sling & Campus Pouch',
+      tagline: 'Tas selempang streetwear utilitarian beraksen saku vintage untuk menyimpan HP, dompet, dan TWS.',
+      vibe: 'Y2K Gorpcore & Urban Streetwear',
+      productDescription: 'Tas selempang multifungsi berukuran 22 x 16 cm dengan 2 kompartemen utama. Menggunakan saku asli jeans sebagai slot kartu cepat, strap adjustable dari waistband, serta penutup magnetik/kancing untuk melindungi gadget saat bepergian ke kampus.',
+      difficulty: skillLevel === 'Beginner' ? 'Super Easy (Tanpa Jahit / Lem Kain)' : 'Moderate (Crafty Stitching)',
+      timeEstimate: skillLevel === 'Beginner' ? '15-20 Menit' : '25-35 Menit',
+      estimatedValueIdr: 85000,
+      co2SavedKg: 4.8,
+      landfillDivertedGrams: 420,
+      pointsRewarded: 85,
+      benefits: {
+        economic: 'Menghemat pengeluaran belanja tas selempang baru senilai Rp 85.000 - Rp 150.000 di toko ritel.',
+        environmental: 'Mencegah 420 gram serat tekstil sintetis/katun menumpuk puluhan tahun di TPA dan menghemat ~2.000 liter air dari konsumsi pakaian baru.',
+        practical: 'Menghasilkan tas gadget tangguh tahan gesek dengan saku akses instan untuk kartu e-money dan earphone.',
+      },
+      requiredMaterials: [
+        '1 potong bagian kaki atau saku celana jeans bekas dari foto',
+        'Waistband (ban pinggang) celana atau tali hoodie bekas untuk strap selempang',
+        '1 buah kancing cadangan / magnet penutup atau perekat velcro',
+        'Kain perca tipis (opsional untuk lapisan dalam/furing)',
+      ],
+      toolsNeeded: ['Gunting kain tajam', 'Penggaris & kapur penanda', skillLevel === 'Beginner' ? 'Lem kain tahan cuci (fabric glue)' : 'Jarum jahit & benang jeans no. 30'],
+      steps: [
+        {
+          stepNumber: 1,
+          title: 'Pemotongan & Pemetaan Pola Kantong',
+          instruction: 'Potong bagian saku belakang celana jeans dengan menyisakan 2 cm keliling kain di sekitarnya untuk kampuh jahitan/rekat. Potong persegi panjang 24 x 18 cm dari potongan kaki celana untuk badan tas.',
+          tip: 'Pertahankan jahitan asli saku untuk memberikan estetika deconstructed vintage yang bernilai jual tinggi.',
+          timeMinutes: 5,
+        },
+        {
+          stepNumber: 2,
+          title: 'Pemasangan Tali Selempang (Strap)',
+          instruction: 'Gunting ban pinggang jeans (waistband) memanjang. Pasang kedua ujungnya di sisi dalam kanan dan kiri badan tas menggunakan jahitan silang kotak ganda atau lem kain kuat.',
+          tip: 'Gunakan simpul silang ganda agar strap kuat menopang beban HP berat dan dompet.',
+          timeMinutes: 8,
+        },
+        {
+          stepNumber: 3,
+          title: 'Finishing & Detail Kancing Magnet',
+          instruction: 'Lipat bagian penutup atas (flap) sebesar 5 cm ke arah depan. Pasangkan kancing atau magnet di bagian dalam flap dan badan tas. Tambahkan raw-hem (rumbai benang) pada tepian bawah untuk sentuhan edgy.',
+          tip: 'Semprotkan sedikit lilin lebah (beeswax) tipis pada permukaan luar jika ingin efek water-repellent.',
+          timeMinutes: 7,
+        },
+      ],
+      stylingTips: 'Padukan dengan oversized graphic t-shirt dan sneakers. Pasangkan gantungan carabiner metalik pada loop sabuk tas untuk menonjolkan estetika gorpcore modern.',
+      safetyNote: 'Hati-hati saat menggunting sambungan jahitan denim yang tebal agar gunting tidak meleset.',
+    };
+  }
+
+  if (p.includes('kaleng') || p.includes('aluminium') || p.includes('tin') || p.includes('soda') || p.includes('kopi')) {
+    return {
+      detectedItemName: 'Kaleng Minuman Aluminium / Kaleng Biskuit',
+      detectedMaterialType: 'Aluminium Alloy & Tinplate Recyclable',
+      detectedCondition: 'Silinder logam kokoh, tahan panas, dan memiliki permukaan mulus berdaya pantul cahaya.',
+      projectName: 'Aesthetic Industrial Desk Lamp & Pen Holder',
+      tagline: 'Lampu meja aksen industrial minimalis dan wadah kuas/pena estetik dari kaleng aluminium.',
+      vibe: 'Modern Industrial & Minimalist Metalcraft',
+      productDescription: 'Lampu aksen meja belajar bermotif cahaya punch-hole berpola rasi bintang, dilengkapi wadah pulpen terintegrasi. Memberikan pencahayaan hangat temaram saat belajar malam hari.',
+      difficulty: 'Moderate (Crafty)',
+      timeEstimate: '20-25 Menit',
+      estimatedValueIdr: 55000,
+      co2SavedKg: 3.2,
+      landfillDivertedGrams: 220,
+      pointsRewarded: 70,
+      benefits: {
+        economic: 'Menghemat biaya lampu tidur aksen industrial senilai Rp 50.000 - Rp 95.000.',
+        environmental: 'Daur ulang aluminium menghemat 95% energi dibanding memproduksi aluminium dari tambang bauksit baru.',
+        practical: 'Menciptakan penerangan belajar yang nyaman di mata tanpa silau di ruangan kamar.',
+      },
+      requiredMaterials: ['1-2 kaleng minuman aluminium dari foto', 'Lampu LED mini bertenaga baterai / USB fairy lights', 'Cat semprot matte hitam/putih (opsional)'],
+      toolsNeeded: ['Paku kecil & palu', 'Pembuka kaleng serbaguna', 'Amplas halus untuk menghaluskan bibir kaleng'],
+      steps: [
+        {
+          stepNumber: 1,
+          title: 'Pembersihan & Penghalusan Bibir Kaleng',
+          instruction: 'Buka tutup atas kaleng dengan pembuka kaleng putar. Cuci bersih dan amplas tepian potongan hingga tumpul dan aman disentuh.',
+          tip: 'Oleskan lilin atau selotip kertas pada tepian atas selama pengerjaan untuk perlindungan ekstra.',
+          timeMinutes: 5,
+        },
+        {
+          stepNumber: 2,
+          title: 'Pembuatan Pola Lubang Cahaya (Punch-Hole Pattern)',
+          instruction: 'Tempelkan pola kertas rasi bintang atau pola geometris di dinding luar kaleng. Gunakan paku kecil dan ketukan palu ringan untuk melubangi titik-titik cahaya.',
+          tip: 'Isi kaleng dengan air lalu bekukan di freezer sebelum memaku agar dinding kaleng tidak penyok saat dipukul.',
+          timeMinutes: 10,
+        },
+        {
+          stepNumber: 3,
+          title: 'Pemasangan LED & Finishing',
+          instruction: 'Masukkan lampu LED mini ke dalam dasar kaleng. Nyalakan di ruangan gelap untuk melihat pantulan pola cahaya yang estetik.',
+          tip: 'Pilih LED warm white (3000K) untuk menciptakan suasana kamar kost yang menenangkan.',
+          timeMinutes: 5,
+        },
+      ],
+      stylingTips: 'Tempatkan di samping cermin atau di sudut rak buku kayu untuk menciptakan aksen kontras antara logam dan kayu.',
+      safetyNote: 'Selalu gunakan sarung tangan saat melubangi kaleng dan pastikan tidak ada serpihan tajam yang tertinggal.',
+    };
+  }
+
   // Universal smart creative fallback
   return {
     detectedItemName: 'Limbah Padat Rumah Tangga & Kemasan Produk',
@@ -248,32 +298,35 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const systemInstruction = `You are "BumiKita AI Vision & Maker", an institutional-grade Upcycling Engineering & Zero-Waste Design Specialist.
+    const systemInstruction = `You are "BumiKita AI Vision & Maker", an institutional-grade Zero-Waste Engineering & Multimodal Upcycling Vision Specialist.
 
-CRITICAL VISION, RECOGNITION & CRAFTSMANSHIP MANDATES:
-1. AUTONOMOUS VISUAL INSPECTION:
-   When an image is provided, carefully inspect the photo to identify:
-   - The exact discarded object/waste (e.g., 'Celana Jeans Denim Robek', 'Botol Plastik PET 600ml', 'Kotak Kardus Sepatu Bekas', 'Kemasan Kopi/Snack Sachet Metalized').
-   - Material composition (e.g., 'Heavy Denim Cotton', 'Polietilena Tereftalat (PET #1)', 'Corrugated Cardboard', 'Aluminium Foil Composite').
-   - Physical condition (e.g., 'Kain tebal tanpa noda jamur', 'Plastik transparan elastis', 'Karton berstruktur kaku').
+STRICT MANDATORY RULES FOR VISUAL RECOGNITION & ACCURACY:
+1. 100% VISUAL GROUNDING ON THE ATTACHED PHOTO:
+   - When an image is provided, your absolute primary directive is to visually inspect and accurately identify what physical object is in the photograph.
+   - Look carefully at geometry, transparency, texture, contours, labels, and material type:
+     * If the photo shows a PLASTIC BOTTLE (e.g. Aqua, Le Minerale, soda bottle, detergent bottle, botol plastik), identify it as a Plastic Bottle (e.g. 'Botol Plastik PET Air Mineral / Minuman Ringan').
+     * If the photo shows a GLASS BOTTLE / JAR (e.g. botol sirup, toples selai), identify it as Glass (e.g. 'Botol / Toples Kaca Bening').
+     * If the photo shows an ALUMINUM CAN (e.g. kaleng soda, kaleng susu), identify it as Aluminium / Tin (e.g. 'Kaleng Minuman Ringan Aluminium').
+     * If the photo shows a CARDBOARD BOX / PACKAGING (e.g. kardus sepatu, box e-commerce), identify it as Cardboard (e.g. 'Kotak Kardus Sepatu / Karton Corrugated').
+     * If the photo shows CLOTHING / JEANS / FABRIC (e.g. celana denim, kaos, kain perca), identify it as Fabric (e.g. 'Celana Jeans Denim Bekas / Tekstil Katun').
+     * If the photo shows PLASTIC SACHETS / POUCH (e.g. sachet kopi, detergen refill), identify it as Sachet Composite (e.g. 'Kemasan Sachet Kopi Foil / Plastik Multilayer').
+     * If the photo shows PLASTIC CUPS / BOBA (e.g. gelas cup plastik), identify it as Plastic Cup PP.
+   - NEVER misidentify or hallucinate a completely different item (e.g. NEVER call a plastic bottle a denim jeans or cardboard box).
 
-2. PRECISE TARGET PRODUCT TRANSLATION:
-   - The user only describes WHAT PRODUCT THEY WANT TO MAKE (e.g., "Ingin jadi tas selempang", "Jadikan pot tanaman estetik", "Bikin organizer meja kost"), OR leaves it blank.
-   - You MUST adapt the visually detected waste materials to build EXACTLY what they requested (or the most practical, trendy, high-value creation if left blank).
-   - Provide a comprehensive, accurate 'productDescription' explaining what is being built, its exact physical dimensions/form, primary functions, and why it is practical.
+2. CRAFTING FEASIBILITY & ADAPTIVE BLUEPRINT TRANSLATION:
+   - The primary raw material of the generated DIY blueprint MUST be the item physically detected in the photo.
+   - The user only specifies what they want to make (or leaves it blank). You must adapt the DETECTED waste object into that goal if practical:
+     * If the photo is a plastic bottle and the user requested a bag/pouch: propose a realistic craft like "Pouch Pensil & Organizer Resleting Transparan dari 2 Botol Plastik" or "Hanging Travel Organizer Botol Plastik".
+     * If the photo is a plastic bottle and the user requested no specific item: propose the most stylish, useful creation (e.g., "Self-Watering Minimalist Desk Planter", "Aesthetic Stationery & Desk Organizer", or "Drip Irrigation Feeder").
+     * If the photo is cardboard: suggest a desk organizer, charging station, or bookshelf file tier.
+   - If the request is physically impossible without additional major elements, prioritize feasibility using the detected item as the core body.
 
-3. DETAILED ACTIONABLE STEPS:
-   - Every single step must be clear, sequential, and realistic with exact measurements (in cm/mm) and execution guidance.
-   - Include specific tools and secondary materials needed (e.g., jenis lem yang tepat, ukuran gunting/cutter, jarum & benang).
-
-4. MULTI-DIMENSIONAL BENEFITS:
-   - 'benefits.economic': Concrete calculation of money saved versus buying a new retail item.
-   - 'benefits.environmental': Tangible waste diversion and reduction of carbon/water footprint.
-   - 'benefits.practical': Everyday convenience and functional utility for the user.
-
-5. TONE & ACCURACY:
-   - Deliver instructions in clear, modern, encouraging Indonesian tailored for students, makers, and young creators.
-   - Provide realistic estimates for resale value (in IDR), CO2 saved (kg), and diverted landfill weight (grams).`;
+3. HIGH-FIDELITY STEP-BY-STEP GUIDELINES:
+   - Provide concrete, sequential steps with exact measurements (in cm/mm).
+   - Detail the exact tools needed (cutter, scissors, ruler, needle, specific glue).
+   - In 'productDescription', thoroughly explain what the finished product is, its physical dimensions, practical utility, and durability.
+   - In 'benefits', clearly break down Economic savings (IDR saved vs buying new), Environmental impact (CO2 and landfill saved), and Practical convenience.
+   - Write in crisp, clear, inspiring Indonesian.`;
 
     const contentsPayload: any = [];
 
@@ -288,12 +341,19 @@ CRITICAL VISION, RECOGNITION & CRAFTSMANSHIP MANDATES:
     }
 
     const userTextPrompt = imageBase64
-      ? `[MULTIMODAL AI VISION TASK]
-1. Visually identify the discarded waste item, its material type, and its physical condition from this photo.
-2. What the user wants to make: "${prompt?.trim() || 'Rekomendasikan kreasi upcycling paling estetik, fungsional, dan bernilai tinggi dari barang bekas di foto ini'}"
-3. Maker Skill Level: ${skillLevel}
+      ? `[DEEP MULTIMODAL AI VISION TASK]
+1. CAREFULLY INSPECT THE ATTACHED PHOTO:
+   - What exact physical discarded object / waste is in the photo? (e.g. Botol Plastik, Kardus, Jeans, Kaleng, Sachet, dll.)
+   - Identify the exact material polymer / type and physical condition.
+2. USER'S CRAFTING GOAL: "${prompt?.trim() || 'Rekomendasikan kreasi upcycling paling estetik, fungsional, bernilai tinggi, dan paling tepat untuk barang di foto ini'}"
+3. MAKER SKILL LEVEL: ${skillLevel}
 
-Generate a complete, highly accurate, step-by-step DIY upcycling blueprint with detailed product breakdown, required tools, comprehensive steps with tips, styling guidance, and 3-pillar benefits (economic, environmental, practical).`
+GENERATE A 100% ACCURATE, COMPREHENSIVE DIY BLUEPRINT:
+- The project MUST utilize the actual object shown in the photo as the core material.
+- Provide a detailed 'productDescription' explaining the item's form, dimensions, and daily utility.
+- List all required materials & household tools.
+- Provide clear, numbered steps with tips and exact execution timing.
+- Include concrete 3-pillar benefits (Economic, Environmental, Practical) and eco-metrics.`
       : `Transform this discarded item/waste into an amazing upcycle project:
 User Goal / What to build: "${prompt || 'Suggest the best creative upcycling project for this item'}"
 Target Skill Level: ${skillLevel}

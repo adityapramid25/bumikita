@@ -51,6 +51,9 @@ export default function WasteToWorthScanner() {
   const [isClaimed, setIsClaimed] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [pdfSuccessMessage, setPdfSuccessMessage] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanStageText, setScanStageText] = useState('Memulai pemindaian AI...');
+  const [scanStageIndex, setScanStageIndex] = useState(1);
 
   // Camera State
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -292,9 +295,38 @@ export default function WasteToWorthScanner() {
     setCompletedSteps([]);
     setCheckedMaterials([]);
     setIsClaimed(false);
+    setScanProgress(8);
+    setScanStageIndex(1);
+    setScanStageText('Memindai piksel gambar & menganalisis geometri objek...');
+
+    // Progress simulation timer for transparent deep inspection feedback
+    const progressTimer = setInterval(() => {
+      setScanProgress((prev) => {
+        if (prev < 25) {
+          setScanStageIndex(1);
+          setScanStageText('Memindai piksel & kontur fisik objek dari foto...');
+          return prev + 5;
+        } else if (prev < 55) {
+          setScanStageIndex(2);
+          setScanStageText('Mengidentifikasi klasifikasi material & polimer spesifik...');
+          return prev + 6;
+        } else if (prev < 80) {
+          setScanStageIndex(3);
+          setScanStageText('Menganalisis kelayakan struktural & durabilitas DIY...');
+          return prev + 5;
+        } else if (prev < 95) {
+          setScanStageIndex(4);
+          setScanStageText('Menyusun blueprint presisi, alat, bahan, dan 3-Pillar Benefits...');
+          return prev + 3;
+        }
+        return prev;
+      });
+    }, 160);
+
+    const minDelayPromise = new Promise((resolve) => setTimeout(resolve, selectedImage ? 2200 : 900));
 
     try {
-      const res = await fetch('/api/gemini/upcycle', {
+      const fetchPromise = fetch('/api/gemini/upcycle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -302,17 +334,24 @@ export default function WasteToWorthScanner() {
           imageBase64: selectedImage,
           skillLevel,
         }),
+      }).then(async (res) => {
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Gagal memproses ide upcycle. Coba lagi!');
+        }
+        return data.data;
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Gagal memproses ide upcycle. Coba lagi!');
-      }
-
-      setResult(data.data);
+      const [blueprintResult] = await Promise.all([fetchPromise, minDelayPromise]);
+      clearInterval(progressTimer);
+      setScanProgress(100);
+      setScanStageText('Analisis AI Vision Selesai! Blueprint siap dirakit.');
+      setResult(blueprintResult);
     } catch (err: any) {
+      clearInterval(progressTimer);
       setError(err.message || 'Terjadi kesalahan saat memproses AI. Silakan coba lagi.');
     } finally {
+      clearInterval(progressTimer);
       setIsLoading(false);
     }
   };
@@ -865,8 +904,8 @@ export default function WasteToWorthScanner() {
             >
               {isLoading ? (
                 <>
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                  <span>Gemini AI Sedang Menganalisis Foto & Merancang Resep...</span>
+                  <RefreshCw className="w-5 h-5 animate-spin text-[#FF9E20]" />
+                  <span>Gemini AI Sedang Menganalisis Sampah Secara Mendalam ({scanProgress}%)...</span>
                 </>
               ) : (
                 <>
@@ -882,6 +921,94 @@ export default function WasteToWorthScanner() {
           </div>
         </div>
       </div>
+
+      {/* AI Vision Deep Scanning Radar / Inspection HUD (Active during isLoading) */}
+      {isLoading && (
+        <div className="bg-[#FAF8F5] rounded-[32px] p-6 sm:p-8 shadow-clay-card border-2 border-[#357A59]/30 space-y-6 animate-in fade-in zoom-in-95 duration-300">
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            {/* Scanned Photo Preview with Radar / Laser Scanline */}
+            {selectedImage ? (
+              <div className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-2xl overflow-hidden shadow-clay-card border-2 border-[#357A59] flex-shrink-0 bg-black">
+                <img
+                  src={selectedImage}
+                  alt="Scanned Object"
+                  className="w-full h-full object-cover opacity-80"
+                />
+                {/* Laser scan line */}
+                <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#FF9E20] to-transparent shadow-[0_0_12px_#FF9E20] animate-bounce" />
+                {/* HUD Corner Targets */}
+                <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-[#357A59]" />
+                <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-[#357A59]" />
+                <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-[#357A59]" />
+                <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-[#357A59]" />
+                {/* Live Pulse Label */}
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/70 text-[#FF9E20] text-[9px] font-black uppercase tracking-widest backdrop-blur-sm">
+                  LIVE AI VISION
+                </div>
+              </div>
+            ) : (
+              <div className="w-24 h-24 rounded-2xl bg-[#E8F2ED] border border-[#357A59]/40 flex items-center justify-center flex-shrink-0 text-[#357A59] shadow-clay-sm">
+                <Sparkles className="w-10 h-10 animate-spin text-[#357A59]" />
+              </div>
+            )}
+
+            {/* Stage Progress & Detail */}
+            <div className="flex-1 w-full space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-wider text-[#357A59] flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#357A59] animate-ping inline-block" />
+                  Pemindaian & Analisis Multi-Tahap
+                </span>
+                <span className="text-sm font-black text-[#1A4D3A] font-mono">
+                  {scanProgress}%
+                </span>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full h-3 bg-[#E8F2ED] rounded-full overflow-hidden p-0.5 border border-[#357A59]/20 shadow-clay-inset">
+                <div
+                  className="h-full bg-gradient-earth rounded-full transition-all duration-300 ease-out"
+                  style={{ width: `${Math.min(100, Math.max(8, scanProgress))}%` }}
+                />
+              </div>
+
+              {/* Current Active Step Text */}
+              <p className="text-sm font-bold text-[#1A4D3A] flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 animate-spin text-[#357A59] flex-shrink-0" />
+                <span>{scanStageText}</span>
+              </p>
+
+              {/* 4 Inspection Checkpoints */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+                {[
+                  { label: 'Deteksi Visual', stage: 1 },
+                  { label: 'Uji Polimer Material', stage: 2 },
+                  { label: 'Struktur & Durabilitas', stage: 3 },
+                  { label: 'Blueprint Presisi', stage: 4 },
+                ].map((item) => {
+                  const isDone = scanStageIndex > item.stage;
+                  const isCurrent = scanStageIndex === item.stage;
+                  return (
+                    <div
+                      key={item.stage}
+                      className={`p-2 rounded-xl text-center text-[10px] font-bold border transition-all ${
+                        isDone
+                          ? 'bg-[#E8F2ED] text-[#357A59] border-[#357A59]/30 shadow-clay-sm'
+                          : isCurrent
+                          ? 'bg-[#357A59] text-white border-[#357A59] shadow-clay-green'
+                          : 'bg-[#FAF8F5] text-[#1A4D3A]/40 border-black/5'
+                      }`}
+                    >
+                      {isDone ? '✓ ' : isCurrent ? '⏳ ' : '• '}
+                      {item.label}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Generated Upcycle Blueprint Output */}
       {result && (
