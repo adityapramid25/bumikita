@@ -5,8 +5,7 @@ export function getApiKey(): string | null {
     process.env.CUSTOM_AI_API_KEY ||
     process.env.ECO_AI_API_KEY ||
     process.env.BUMIKITA_AI_API_KEY ||
-    process.env.AI_API_KEY ||
-    process.env.GEMINI_API_KEY;
+    process.env.AI_API_KEY;
 
   if (!customKey || customKey === 'MY_GEMINI_API_KEY' || customKey.trim().length === 0) {
     return null;
