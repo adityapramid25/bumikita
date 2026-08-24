@@ -53,6 +53,8 @@ export default function WasteToWorthScanner() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [hasMultipleCameras, setHasMultipleCameras] = useState(true);
 
+  const [isCameraConnecting, setIsCameraConnecting] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -64,7 +66,11 @@ export default function WasteToWorthScanner() {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     setIsCameraActive(false);
+    setIsCameraConnecting(false);
     setCameraError(null);
   }, []);
 
@@ -73,6 +79,18 @@ export default function WasteToWorthScanner() {
       stopCamera();
     };
   }, [stopCamera]);
+
+  // Callback ref to immediately attach stream when video DOM element mounts
+  const handleVideoRef = useCallback((node: HTMLVideoElement | null) => {
+    videoRef.current = node;
+    if (node && streamRef.current) {
+      node.srcObject = streamRef.current;
+      node.onloadedmetadata = () => {
+        node.play().catch((e) => console.warn('Autoplay error:', e));
+      };
+      node.play().catch(() => {});
+    }
+  }, []);
 
   // Check available camera devices
   useEffect(() => {
@@ -90,6 +108,7 @@ export default function WasteToWorthScanner() {
 
   const startCamera = async (facing: 'environment' | 'user' = cameraFacing) => {
     setCameraError(null);
+    setIsCameraConnecting(true);
     stopCamera();
 
     try {
@@ -97,41 +116,64 @@ export default function WasteToWorthScanner() {
         throw new Error('Fitur kamera tidak didukung di browser ini. Silakan gunakan upload foto.');
       }
 
-      let stream: MediaStream;
+      let stream: MediaStream | null = null;
+
+      // Strategy 1: Ideal facingMode and standard HD resolution
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: facing },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 480 },
           },
           audio: false,
         });
       } catch {
-        // Fallback for strict browsers
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: facing,
-          },
-          audio: false,
-        });
+        // Strategy 2: Simple facingMode string
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: facing,
+            },
+            audio: false,
+          });
+        } catch {
+          // Strategy 3: Pure video fallback (any available camera)
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+        }
+      }
+
+      if (!stream) {
+        throw new Error('Tidak dapat memperoleh stream video dari kamera.');
       }
 
       streamRef.current = stream;
       setCameraFacing(facing);
+      setIsCameraActive(true);
+      setIsCameraConnecting(false);
+
+      // If video ref is already available, attach directly
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch(() => {});
+        };
         videoRef.current.play().catch(() => {});
       }
-      setIsCameraActive(true);
     } catch (err: any) {
       console.error('Camera error:', err);
+      setIsCameraConnecting(false);
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setCameraError('Izin akses kamera ditolak. Silakan izinkan akses kamera di pengaturan browser atau gunakan tombol upload file.');
+        setCameraError('Izin akses kamera ditolak oleh browser/sistem. Klik ikon gembok/kamera di address bar browser untuk mengizinkan kamera, atau gunakan upload gambar.');
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        setCameraError('Kamera tidak ditemukan pada perangkat ini. Silakan gunakan tombol upload file.');
+        setCameraError('Kamera tidak terdeteksi pada perangkat ini. Silakan gunakan tombol upload file.');
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        setCameraError('Kamera sedang dipakai oleh aplikasi lain (seperti Zoom/Meet). Tutup aplikasi tersebut dan coba lagi.');
       } else {
-        setCameraError('Gagal membuka kamera. Silakan coba lagi atau gunakan upload file.');
+        setCameraError(err.message || 'Gagal mengakses kamera. Silakan coba lagi atau gunakan upload foto.');
       }
       setIsCameraActive(false);
     }
@@ -421,7 +463,7 @@ export default function WasteToWorthScanner() {
 
                 {/* Video Viewfinder Container with Dynamic Aspect Ratio */}
                 <div 
-                  className={`relative rounded-2xl overflow-hidden shadow-clay-card border-2 border-[#357A59] bg-black flex flex-col justify-between transition-all duration-300 ${
+                  className={`relative rounded-2xl overflow-hidden shadow-clay-card border-2 border-[#357A59] bg-[#111827] flex flex-col justify-between transition-all duration-300 ${
                     aspectRatio === '1:1'
                       ? 'aspect-square max-h-[380px] w-full'
                       : aspectRatio === '4:3'
@@ -431,14 +473,26 @@ export default function WasteToWorthScanner() {
                       : 'aspect-[9/16] max-h-[460px] w-full max-w-[280px] mx-auto'
                   }`}
                 >
-                  {/* Live Video Feed */}
+                  {/* Live Video Feed with Callback Ref */}
                   <video
-                    ref={videoRef}
+                    ref={handleVideoRef}
                     playsInline
                     autoPlay
                     muted
+                    onCanPlay={(e) => {
+                      (e.target as HTMLVideoElement).play().catch(() => {});
+                    }}
                     className={`w-full h-full object-cover ${cameraFacing === 'user' ? 'scale-x-[-1]' : ''}`}
                   />
+
+                  {/* Connecting / Loading Spinner Overlay if camera stream initializing */}
+                  {isCameraConnecting && (
+                    <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-2.5 z-20">
+                      <RefreshCw className="w-7 h-7 text-[#6DB677] animate-spin" />
+                      <p className="text-xs font-bold text-white">Menghubungkan Kamera...</p>
+                      <p className="text-[10px] text-white/60">Mohon izinkan akses kamera di browser</p>
+                    </div>
+                  )}
 
                   {/* Animated Scanner Laser Overlay */}
                   <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-3.5">
