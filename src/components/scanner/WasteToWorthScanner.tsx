@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useEco } from '@/src/context/EcoContext';
 import { SAMPLE_TRASH_ITEMS } from '@/src/data/mockData';
 import { UpcycleProjectResult } from '@/src/types';
+import { generateUpcyclePDF } from '@/src/lib/pdfGenerator';
 import { 
   Sparkles, 
   Upload, 
@@ -28,7 +29,10 @@ import {
   RectangleHorizontal,
   RectangleVertical,
   Maximize2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Download,
+  FileText,
+  Printer
 } from 'lucide-react';
 
 type CameraAspectRatio = '1:1' | '4:3' | '16:9' | '9:16';
@@ -45,6 +49,8 @@ export default function WasteToWorthScanner() {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [checkedMaterials, setCheckedMaterials] = useState<string[]>([]);
   const [isClaimed, setIsClaimed] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [pdfSuccessMessage, setPdfSuccessMessage] = useState(false);
 
   // Camera State
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -321,6 +327,21 @@ export default function WasteToWorthScanner() {
     setCompletedSteps((prev) =>
       prev.includes(stepNum) ? prev.filter((s) => s !== stepNum) : [...prev, stepNum]
     );
+  };
+
+  const handleDownloadPDF = () => {
+    if (!result) return;
+    setIsDownloadingPdf(true);
+    try {
+      generateUpcyclePDF(result);
+      setPdfSuccessMessage(true);
+      setTimeout(() => setPdfSuccessMessage(false), 4000);
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      setError('Gagal membuat file PDF. Silakan coba beberapa saat lagi.');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   const handleClaimPointsAndShare = () => {
@@ -867,74 +888,170 @@ export default function WasteToWorthScanner() {
         <div className="bg-[#FAF8F5] rounded-[32px] p-6 sm:p-10 shadow-clay-card border border-white space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* AI Vision Detection Banner */}
           {result.detectedItemName && (
-            <div className="p-4 rounded-2xl bg-[#E8F2ED] border border-[#357A59]/30 shadow-clay-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#357A59] text-white flex items-center justify-center flex-shrink-0 shadow-clay-sm">
-                  <Sparkles className="w-4 h-4" />
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#E8F2ED] border border-[#357A59]/30 shadow-clay-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#357A59] text-white flex items-center justify-center flex-shrink-0 shadow-clay-sm">
+                  <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-[#357A59] uppercase tracking-wider">
                     Hasil Deteksi AI Vision dari Foto:
                   </p>
-                  <p className="text-sm font-black text-[#1A4D3A]">
+                  <p className="text-base font-black text-[#1A4D3A]">
                     {result.detectedItemName}
                   </p>
+                  {result.detectedCondition && (
+                    <p className="text-xs text-[#357A59]/90 font-semibold mt-0.5">
+                      🔎 Kondisi: {result.detectedCondition}
+                    </p>
+                  )}
                 </div>
               </div>
               {result.detectedMaterialType && (
-                <span className="self-start sm:self-auto px-3 py-1 rounded-full bg-white text-[#1A4D3A] text-xs font-bold border border-[#1A4D3A]/10 shadow-clay-pill">
+                <span className="self-start sm:self-auto px-3.5 py-1.5 rounded-full bg-white text-[#1A4D3A] text-xs font-bold border border-[#1A4D3A]/10 shadow-clay-pill">
                   Material: {result.detectedMaterialType}
                 </span>
               )}
             </div>
           )}
 
-          {/* Blueprint Header */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[#1A4D3A]/10">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20 shadow-clay-sm">
-                  ✨ Vibe: {result.vibe}
+          {/* Blueprint Header & Detailed Product Breakdown */}
+          <div className="space-y-4 pb-6 border-b border-[#1A4D3A]/10">
+            {/* PDF Success Notification Toast */}
+            {pdfSuccessMessage && (
+              <div className="p-3.5 rounded-2xl bg-[#E8F2ED] border border-[#357A59]/40 text-[#215E61] text-xs font-bold flex items-center justify-between shadow-clay-sm animate-in fade-in slide-in-from-top-2">
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#357A59] flex-shrink-0" />
+                  <span>Panduan DIY Upcycle berhasil disimpan ke PDF! File siap dibuka offline kapan saja.</span>
                 </span>
-                <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#FFF5E6] text-[#D97E0D] border border-[#FF9E20]/30 shadow-clay-sm">
-                  ⚡ {result.difficulty}
-                </span>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-pill">
-                  ⏱️ {result.timeEstimate}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setPdfSuccessMessage(false)}
+                  className="text-[11px] text-[#357A59] font-bold hover:underline ml-2"
+                >
+                  Tutup
+                </button>
+              </div>
+            )}
+
+            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+              <div className="space-y-2.5 max-w-2xl">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20 shadow-clay-sm">
+                    ✨ Vibe: {result.vibe}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#FFF5E6] text-[#D97E0D] border border-[#FF9E20]/30 shadow-clay-sm">
+                    ⚡ {result.difficulty}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-pill">
+                    ⏱️ {result.timeEstimate}
+                  </span>
+
+                  {/* Quick PDF Download Pill Button */}
+                  <button
+                    id="btn-save-as-pdf-top"
+                    type="button"
+                    onClick={handleDownloadPDF}
+                    disabled={isDownloadingPdf}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-[#215E61] hover:bg-[#E8F2ED] hover:text-[#184547] border border-[#357A59]/30 text-xs font-extrabold shadow-clay-button transition-all cursor-pointer"
+                  >
+                    {isDownloadingPdf ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#357A59]" />
+                        <span>Membuat PDF...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-3.5 h-3.5 text-[#357A59]" />
+                        <span>Simpan sebagai PDF</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1A4D3A]">
+                  {result.projectName}
+                </h3>
+                <p className="text-sm sm:text-base text-[#1A4D3A]/80 font-medium italic">
+                  &ldquo;{result.tagline}&rdquo;
+                </p>
+
+                {/* Clear & Detailed Product Explanation */}
+                {result.productDescription && (
+                  <div className="p-4 rounded-2xl bg-white border border-[#1A4D3A]/10 shadow-clay-sm mt-3 space-y-1">
+                    <p className="text-[11px] font-extrabold text-[#357A59] uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Rincian Barang yang Dibuat & Kegunaannya:</span>
+                    </p>
+                    <p className="text-xs sm:text-sm text-[#1A4D3A]/85 leading-relaxed font-medium">
+                      {result.productDescription}
+                    </p>
+                  </div>
+                )}
               </div>
 
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1A4D3A]">
-                {result.projectName}
-              </h3>
-              <p className="text-sm sm:text-base text-[#1A4D3A]/80 font-medium italic">
-                &ldquo;{result.tagline}&rdquo;
-              </p>
+              {/* Impact & Value Badges Matrix */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-2.5 w-full lg:w-56 flex-shrink-0">
+                <div className="bg-[#FAF8F5] p-3.5 rounded-2xl shadow-clay-button border border-white text-center">
+                  <p className="text-[10px] font-bold text-[#1A4D3A]/60 uppercase">Estimasi Nilai Jual</p>
+                  <p className="text-base sm:text-lg font-black text-[#357A59]">
+                    Rp {result.estimatedValueIdr?.toLocaleString('id-ID')}
+                  </p>
+                </div>
+
+                <div className="bg-[#FAF8F5] p-3.5 rounded-2xl shadow-clay-button border border-white text-center">
+                  <p className="text-[10px] font-bold text-[#1A4D3A]/60 uppercase">CO2 Dicegah</p>
+                  <p className="text-base sm:text-lg font-black text-[#1A4D3A]">
+                    {result.co2SavedKg} kg
+                  </p>
+                </div>
+
+                <div className="bg-[#FAF8F5] p-3.5 rounded-2xl shadow-clay-button border border-white text-center col-span-2 sm:col-span-1">
+                  <p className="text-[10px] font-bold text-[#1A4D3A]/60 uppercase">Reward Daun</p>
+                  <p className="text-base sm:text-lg font-black text-[#FF9E20] flex items-center justify-center gap-1">
+                    <span>+{result.pointsRewarded}</span> 🍃
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* Impact & Value Badges Matrix */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div className="bg-[#FAF8F5] p-3.5 rounded-2xl shadow-clay-button border border-white text-center">
-                <p className="text-[10px] font-bold text-[#1A4D3A]/60 uppercase">Estimasi Nilai Jual</p>
-                <p className="text-base sm:text-lg font-black text-[#357A59]">
-                  Rp {result.estimatedValueIdr?.toLocaleString('id-ID')}
-                </p>
-              </div>
+            {/* 3 Pillars of Tangible Benefits */}
+            {result.benefits && (
+              <div className="mt-4 pt-4 border-t border-[#1A4D3A]/10 space-y-2.5">
+                <h4 className="text-xs font-extrabold text-[#1A4D3A] uppercase tracking-wider flex items-center gap-1.5">
+                  <Leaf className="w-4 h-4 text-[#357A59]" />
+                  <span>Manfaat Nyata Upcycle Ini (3 Pilar):</span>
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-[#FFF5E6] border border-[#FF9E20]/30 shadow-clay-sm space-y-1">
+                    <p className="text-xs font-black text-[#D97E0D] flex items-center gap-1.5">
+                      <span>💰 Manfaat Finansial</span>
+                    </p>
+                    <p className="text-xs text-[#1A4D3A]/85 leading-relaxed font-medium">
+                      {result.benefits.economic}
+                    </p>
+                  </div>
 
-              <div className="bg-[#FAF8F5] p-3.5 rounded-2xl shadow-clay-button border border-white text-center">
-                <p className="text-[10px] font-bold text-[#1A4D3A]/60 uppercase">CO2 Dicegah</p>
-                <p className="text-base sm:text-lg font-black text-[#1A4D3A]">
-                  {result.co2SavedKg} kg
-                </p>
-              </div>
+                  <div className="p-3.5 rounded-2xl bg-[#E8F2ED] border border-[#357A59]/30 shadow-clay-sm space-y-1">
+                    <p className="text-xs font-black text-[#357A59] flex items-center gap-1.5">
+                      <span>🌱 Manfaat Lingkungan</span>
+                    </p>
+                    <p className="text-xs text-[#1A4D3A]/85 leading-relaxed font-medium">
+                      {result.benefits.environmental}
+                    </p>
+                  </div>
 
-              <div className="bg-[#FAF8F5] p-3.5 rounded-2xl shadow-clay-button border border-white text-center col-span-2 sm:col-span-1">
-                <p className="text-[10px] font-bold text-[#1A4D3A]/60 uppercase">Reward Daun</p>
-                <p className="text-base sm:text-lg font-black text-[#FF9E20] flex items-center justify-center gap-1">
-                  <span>+{result.pointsRewarded}</span> 🍃
-                </p>
+                  <div className="p-3.5 rounded-2xl bg-white border border-[#1A4D3A]/15 shadow-clay-sm space-y-1">
+                    <p className="text-xs font-black text-[#1A4D3A] flex items-center gap-1.5">
+                      <span>⚡ Manfaat Praktis Harian</span>
+                    </p>
+                    <p className="text-xs text-[#1A4D3A]/85 leading-relaxed font-medium">
+                      {result.benefits.practical}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Materials & Tools Row */}
@@ -1006,9 +1123,30 @@ export default function WasteToWorthScanner() {
 
           {/* Step-by-Step Interactive Guide */}
           <div className="space-y-4">
-            <h4 className="text-lg font-extrabold text-[#1A4D3A] flex items-center gap-2">
-              <span>Langkah Pengerjaan DIY ({result.steps?.length} Langkah):</span>
-            </h4>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h4 className="text-lg font-extrabold text-[#1A4D3A] flex items-center gap-2">
+                <span>Langkah Pengerjaan DIY ({result.steps?.length} Langkah):</span>
+              </h4>
+              <button
+                id="btn-download-pdf-steps"
+                type="button"
+                onClick={handleDownloadPDF}
+                disabled={isDownloadingPdf}
+                className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white text-[#215E61] hover:bg-[#E8F2ED] border border-[#357A59]/25 text-xs font-extrabold shadow-clay-button transition-all cursor-pointer"
+              >
+                {isDownloadingPdf ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#357A59]" />
+                    <span>Menyiapkan Dokumen...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5 text-[#357A59]" />
+                    <span>Unduh Panduan PDF</span>
+                  </>
+                )}
+              </button>
+            </div>
 
             <div className="space-y-3.5">
               {result.steps?.map((step) => {
@@ -1078,36 +1216,58 @@ export default function WasteToWorthScanner() {
           <div className="p-6 rounded-2xl bg-gradient-earth text-white shadow-clay-green flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               <h4 className="text-lg font-black text-white">
-                Selesai Membuat Karya Ini?
+                Selesai Membuat atau Mau Simpan Panduan?
               </h4>
               <p className="text-xs text-white/80 font-medium">
-                Klaim reward +{result.pointsRewarded} Poin Daun dan bagikan ke feed Komunitas BumiKita!
+                Unduh PDF untuk digunakan offline di rumah, atau klaim reward +{result.pointsRewarded} Poin Daun!
               </p>
             </div>
 
-            <button
-              id="btn-claim-upcycle-reward"
-              type="button"
-              disabled={isClaimed}
-              onClick={handleClaimPointsAndShare}
-              className={`px-6 py-3 rounded-full font-extrabold text-xs sm:text-sm shadow-clay-button border border-white transition-all ${
-                isClaimed
-                  ? 'bg-[#1A4D3A] text-white opacity-80 cursor-default'
-                  : 'bg-[#FAF8F5] text-[#1A4D3A] hover:scale-105 active:scale-95 cursor-pointer'
-              }`}
-            >
-              {isClaimed ? (
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-[#6DB677]" />
-                  Tersimpan & Poin Diklaim!
-                </span>
-              ) : (
-                <span className="flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-[#FF9E20]" />
-                  Tandai Selesai & Klaim Daun
-                </span>
-              )}
-            </button>
+            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+              <button
+                id="btn-download-pdf-bottom"
+                type="button"
+                onClick={handleDownloadPDF}
+                disabled={isDownloadingPdf}
+                className="flex-1 sm:flex-initial px-5 py-3 rounded-full font-extrabold text-xs sm:text-sm bg-white text-[#1A4D3A] hover:bg-[#E8F2ED] shadow-clay-button border border-white transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {isDownloadingPdf ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-[#357A59]" />
+                    <span>Menyiapkan PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 text-[#357A59]" />
+                    <span>Simpan sebagai PDF</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                id="btn-claim-upcycle-reward"
+                type="button"
+                disabled={isClaimed}
+                onClick={handleClaimPointsAndShare}
+                className={`flex-1 sm:flex-initial px-6 py-3 rounded-full font-extrabold text-xs sm:text-sm shadow-clay-button border border-white transition-all ${
+                  isClaimed
+                    ? 'bg-[#1A4D3A] text-white opacity-80 cursor-default'
+                    : 'bg-[#FF9E20] text-white hover:scale-105 active:scale-95 cursor-pointer shadow-clay-accent'
+                }`}
+              >
+                {isClaimed ? (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-white" />
+                    Tersimpan & Poin Diklaim!
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-white" />
+                    Tandai Selesai & Klaim Daun
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

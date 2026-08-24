@@ -7,160 +7,189 @@ function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) 
   
   if (p.includes('jeans') || p.includes('celana') || p.includes('denim') || p.includes('kain') || p.includes('baju') || p.includes('kaos') || p.includes('tas') || p.includes('pouch') || p.includes('fashion') || p.includes('selempang')) {
     return {
-      detectedItemName: 'Pakaian & Tekstil Bekas (Jeans / Kain Perca)',
-      detectedMaterialType: 'Denim / Katun Tekstil Daur Ulang',
-      projectName: 'Upcycled Patchwork Denim Tech Sling & Pouch',
-      tagline: 'Mengubah sisa kain/denim usang menjadi tas selempang streetwear Y2K fungsional untuk gadget kampus.',
-      vibe: 'Y2K Gorpcore & Campus Streetwear',
+      detectedItemName: 'Celana Jeans Denim Bekas & Kain Perca',
+      detectedMaterialType: 'Heavy Denim Cotton 100% Recyclable',
+      detectedCondition: 'Serat kain kuat & tebal, cocok untuk jahitan struktur tas tanpa perlu furing tebal tambahan.',
+      projectName: 'Upcycled Patchwork Denim Tech Sling & Campus Pouch',
+      tagline: 'Tas selempang streetwear utilitarian beraksen saku vintage untuk menyimpan HP, dompet, dan TWS.',
+      vibe: 'Y2K Gorpcore & Urban Streetwear',
+      productDescription: 'Tas selempang multifungsi berukuran 22 x 16 cm dengan 2 kompartemen utama. Menggunakan saku asli jeans sebagai slot kartu cepat, strap adjustable dari waistband, serta penutup magnetik/kancing untuk melindungi gadget saat bepergian ke kampus.',
       difficulty: skillLevel === 'Beginner' ? 'Super Easy (Tanpa Jahit / Lem Kain)' : 'Moderate (Crafty Stitching)',
       timeEstimate: skillLevel === 'Beginner' ? '15-20 Menit' : '25-35 Menit',
       estimatedValueIdr: 85000,
       co2SavedKg: 4.8,
       landfillDivertedGrams: 420,
       pointsRewarded: 85,
+      benefits: {
+        economic: 'Menghemat pengeluaran belanja tas selempang baru senilai Rp 85.000 - Rp 150.000 di toko ritel.',
+        environmental: 'Mencegah 420 gram serat tekstil sintetis/katun menumpuk puluhan tahun di TPA dan menghemat ~2.000 liter air dari konsumsi pakaian baru.',
+        practical: 'Menghasilkan tas gadget tangguh tahan gesek dengan saku akses instan untuk kartu e-money dan earphone.',
+      },
       requiredMaterials: [
-        'Kain jeans/pakaian bekas dari foto',
-        'Tali webbing / sabuk bekas untuk strap tas',
-        '1 buah kancing cadangan / magnet penutup',
-        'Furing dalaman dari payung rusak / kain tipis',
+        '1 potong bagian kaki atau saku celana jeans bekas dari foto',
+        'Waistband (ban pinggang) celana atau tali hoodie bekas untuk strap selempang',
+        '1 buah kancing cadangan / magnet penutup atau perekat velcro',
+        'Kain perca tipis (opsional untuk lapisan dalam/furing)',
       ],
-      toolsNeeded: ['Gunting kain tajam', 'Penggaris & kapur penanda', skillLevel === 'Beginner' ? 'Lem kain / Fabric glue' : 'Jarum jahit & benang jeans'],
+      toolsNeeded: ['Gunting kain tajam', 'Penggaris & kapur penanda', skillLevel === 'Beginner' ? 'Lem kain tahan cuci (fabric glue)' : 'Jarum jahit & benang jeans no. 30'],
       steps: [
         {
           stepNumber: 1,
-          title: 'Pemotongan Pola Kantong & Badan Tas',
-          instruction: 'Gunting bagian kain jeans/pakaian beserta 2 cm sisa kampuh di sekelilingnya untuk dijadikan kompartemen utama kartu dan HP.',
-          tip: 'Pertahankan jahitan asli saku untuk memberikan estetika deconstructed vintage.',
+          title: 'Pemotongan & Pemetaan Pola Kantong',
+          instruction: 'Potong bagian saku belakang celana jeans dengan menyisakan 2 cm keliling kain di sekitarnya untuk kampuh jahitan/rekat. Potong persegi panjang 24 x 18 cm dari potongan kaki celana untuk badan tas.',
+          tip: 'Pertahankan jahitan asli saku untuk memberikan estetika deconstructed vintage yang bernilai jual tinggi.',
           timeMinutes: 5,
         },
         {
           stepNumber: 2,
           title: 'Pemasangan Tali Selempang (Strap)',
-          instruction: 'Gunting bagian pinggang jeans memanjang atau gunakan tali serut hoodie lama sebagai strap selempang.',
-          tip: 'Gunakan simpul silang ganda agar strap kuat menopang beban HP dan dompet.',
+          instruction: 'Gunting ban pinggang jeans (waistband) memanjang. Pasang kedua ujungnya di sisi dalam kanan dan kiri badan tas menggunakan jahitan silang kotak ganda atau lem kain kuat.',
+          tip: 'Gunakan simpul silang ganda agar strap kuat menopang beban HP berat dan dompet.',
           timeMinutes: 8,
         },
         {
           stepNumber: 3,
           title: 'Finishing & Detail Kancing Magnet',
-          instruction: 'Tempelkan penutup flap di bagian atas dan pasang kancing penutup. Tambahkan rumbai raw-hem di sisi bawah untuk aksen edgy.',
-          tip: 'Semprotkan sedikit cairan lilin lebah (beeswax) jika ingin efek semi waterproof.',
+          instruction: 'Lipat bagian penutup atas (flap) sebesar 5 cm ke arah depan. Pasangkan kancing atau magnet di bagian dalam flap dan badan tas. Tambahkan raw-hem (rumbai benang) pada tepian bawah untuk sentuhan edgy.',
+          tip: 'Semprotkan sedikit lilin lebah (beeswax) tipis pada permukaan luar jika ingin efek water-repellent.',
           timeMinutes: 7,
         },
       ],
-      stylingTips: 'Padukan dengan oversized graphic tee atau hoodie vintage. Pasang carabiner keychain metalik di loop sabuknya untuk nuansa utilitarian gorpcore.',
-      safetyNote: 'Hati-hati saat menggunting sambungan jahitan jeans yang tebal.',
+      stylingTips: 'Padukan dengan oversized graphic t-shirt dan sneakers. Pasangkan gantungan carabiner metalik pada loop sabuk tas untuk menonjolkan estetika gorpcore modern.',
+      safetyNote: 'Hati-hati saat menggunting sambungan jahitan denim yang tebal agar gunting tidak meleset.',
     };
   }
 
   if (p.includes('botol') || p.includes('plastik') || p.includes('pet') || p.includes('cup') || p.includes('boba') || p.includes('gelas') || p.includes('pot') || p.includes('tanaman')) {
     return {
-      detectedItemName: 'Wadah Plastik Bekas Minuman (Botol PET / Cup Boba)',
-      detectedMaterialType: 'Plastik Polimer PET / PP Transparan',
+      detectedItemName: 'Botol Plastik PET 600ml / Cup Minuman Plastik',
+      detectedMaterialType: 'Polyethylene Terephthalate (PET #1) Food Grade',
+      detectedCondition: 'Wadah plastik transparan utuh, kedap air, sangat ideal untuk media hidroponik kapiler.',
       projectName: 'Self-Watering Minimalist Desk Planter & Stationery Pot',
-      tagline: 'Pot tanaman estetik otomatis siram dan tempat alat tulis dari wadah plastik bekas.',
-      vibe: 'Clean Minimalist & Botanical Campus',
+      tagline: 'Pot tanaman estetik dengan sistem irigasi kapiler otomatis anti-layu untuk meja belajar & kamar kost.',
+      vibe: 'Clean Minimalist & Biophilic Workspace',
+      productDescription: 'Pot tanaman modern dua tingkat (dual-chamber) yang memanfaatkan gaya kapilaritas sumbu katun untuk menyuplai air secara konstan ke akar tanaman. Pengguna hanya perlu mengisi air reservoir sebulan sekali tanpa takut tanaman mati kekeringan saat ditinggal libur semester.',
       difficulty: 'Super Easy (5 min)',
       timeEstimate: '10-15 Menit',
       estimatedValueIdr: 45000,
       co2SavedKg: 2.3,
       landfillDivertedGrams: 180,
       pointsRewarded: 60,
+      benefits: {
+        economic: 'Menghemat biaya pot dekorasi meja seharga Rp 35.000 - Rp 60.000 di toko dekorasi interior.',
+        environmental: 'Mencegah plastik PET mencemari laut dan membutuhkan 450+ tahun untuk terurai di alam bebas.',
+        practical: 'Perawatan tanaman zero-effort tanpa perlu menyiram harian karena air tersuplai otomatis sesuai kebutuhan akar.',
+      },
       requiredMaterials: [
-        'Botol plastik / cup kemasan bekas dari foto',
-        'Sumbu kompor / tali kain katun / benang wol tebal',
-        'Tanaman hias kecil (sukulen / sirih gading)',
-        'Media tanam (tanah / sekam bakar)',
+        '1-2 botol plastik bekas transparan (ukuran 600ml atau 1.5L) dari foto',
+        'Sumbu katun / tali kain kaos bekas sepanjang 15 cm',
+        'Tanaman hias mini (sirih gading, sukulen, atau mint)',
+        'Media tanam ringan (sekam bakar / batu hidroton / tanah subur)',
       ],
-      toolsNeeded: ['Cutter / gunting serbaguna', 'Paku kecil / solder (opsional untuk lubang sumbu)', 'Cat akrilik / stiker waterproof'],
+      toolsNeeded: ['Cutter / gunting serbaguna', 'Paku kecil / solder untuk melubangi tutup', 'Cat akrilik / selotip kertas / stiker vinyl'],
       steps: [
         {
           stepNumber: 1,
-          title: 'Potong Botol Menjadi Dua Bagian',
-          instruction: 'Bersihkan botol dan potong melingkar di tengah (sekitar 1/3 bagian atas untuk wadah tanaman, 2/3 bawah untuk penampung air).',
-          tip: 'Gunakan selotip kertas sebagai pemandu agar garis potongan lurus sempurna.',
+          title: 'Potong & Bagi Botol Menjadi Dua Bagian',
+          instruction: 'Bilas botol hingga bebas dari residu gula/minuman. Potong melingkar tepat di 1/3 bagian atas botol. Bagian atas (corong) akan menjadi wadah tanaman, sedangkan bagian bawah menjadi tangki air.',
+          tip: 'Pasang selotip kertas melingkar sebagai garis panduan agar potongan cutter rapi dan lurus presisi.',
           timeMinutes: 4,
         },
         {
           stepNumber: 2,
-          title: 'Pasang Sumbu Kapiler',
-          instruction: 'Buat lubang kecil pada tutup botol, masukkan tali katun/wol sepanjang 15 cm melintasi tutup botol sebagai sumbu penyerap air.',
-          tip: 'Pastikan ujung bawah tali menyentuh dasar air di botol bagian bawah.',
+          title: 'Pasang Sumbu Kapiler pada Tutup Botol',
+          instruction: 'Lubangi bagian tengah tutup botol (diameter ~5 mm). Masukkan tali sumbu katun melintasi tutup botol hingga menyisakan 7 cm di sisi bawah dan 5 cm di dalam corong atas.',
+          tip: 'Basahi tali katun terlebih dahulu dengan air sebelum dipasang agar daya serap kapiler langsung aktif.',
           timeMinutes: 4,
         },
         {
           stepNumber: 3,
-          title: 'Isi Media & Hias Estetik',
-          instruction: 'Balikkan corong botol ke dalam wadah bawah, masukkan media tanam dan tanaman sirih gading. Hias bagian luar dengan stiker minimalis.',
-          tip: 'Kamu hanya perlu mengisi air sebulan sekali karena sistem kapiler menyiram otomatis!',
+          title: 'Pemasangan Media & Finishing Estetik',
+          instruction: 'Letakkan corong botol terbalik ke dalam dasar wadah. Masukkan media tanam dan tanam bibit sirih gading. Isi tangki bawah dengan 100ml air hingga ujung tali terendam sempurna. Hias dinding luar botol dengan cat pastel atau stiker.',
+          tip: 'Letakkan di dekat jendela yang terkena sinar matahari tidak langsung untuk fotosintesis optimal.',
           timeMinutes: 5,
         },
       ],
-      stylingTips: 'Letakkan di sudut meja belajar dekat lampu baca atau jendela kamar kost untuk memberikan sentuhan biophilic workspace yang menyegarkan mata.',
-      safetyNote: 'Ratakan tepi potongan plastik dengan amplas halus atau selotip agar tidak tajam di jari.',
+      stylingTips: 'Tempatkan di samping monitor laptop atau rak buku. Warna hijau tanaman berpadu dengan aksen transparan botol memberi nuansa calm & biophilic.',
+      safetyNote: 'Ratakan tepian plastik hasil potongan dengan amplas halus atau lapisi selotip transparan agar tidak melukai kulit.',
     };
   }
 
   if (p.includes('kardus') || p.includes('kotak') || p.includes('karton') || p.includes('box') || p.includes('sepatu') || p.includes('organizer') || p.includes('meja')) {
     return {
-      detectedItemName: 'Kardus Karton / Kotak Kemasan Bekas',
-      detectedMaterialType: 'Corrugated Cardboard & Kraft Paper',
+      detectedItemName: 'Kotak Kardus Sepatu / Kemasan Paket Karton Corrugated',
+      detectedMaterialType: 'Corrugated Kraft Cardboard High Rigidity',
+      detectedCondition: 'Karton tebal bergelombang dengan sudut presisi, berdaya topang kokoh untuk perkakas meja.',
       projectName: 'Modular Aesthetic Desk Organizer & Tech Charging Dock',
-      tagline: 'Organizer meja belajar modular bertingkat dengan slot manajemen kabel HP dan laptop.',
-      vibe: 'Aesthetic Scandinavian Workspace',
+      tagline: 'Organizer meja belajar modular bertingkat dengan slot manajemen kabel HP dan kompartemen stationery rapi.',
+      vibe: 'Aesthetic Scandinavian & Japandi Workspace',
+      productDescription: 'Rak organizer meja minimalis 3 zona yang mengintegrasikan slot penyimpanan buku/kalkulator vertikal, laci baki horizontal untuk alat tulis, serta dudukan smartphone dengan lubang kabel charger tersembunyi agar meja belajar selalu bersih dan estetik.',
       difficulty: 'Moderate (Crafty)',
       timeEstimate: '20-25 Menit',
       estimatedValueIdr: 65000,
       co2SavedKg: 3.6,
       landfillDivertedGrams: 380,
       pointsRewarded: 75,
+      benefits: {
+        economic: 'Menghemat biaya pembelian desk organizer kayu/akrilik seharga Rp 60.000 - Rp 120.000.',
+        environmental: 'Mendaur ulang 380g limbah karton kemasan e-commerce yang menyumbang volume sampah perkotaan.',
+        practical: 'Merapikan 15+ jenis alat tulis, kabel charger, dan gadget ke dalam satu tempat yang teratur dan rapi.',
+      },
       requiredMaterials: [
-        'Kardus bekas kemasan paket online / kotak sepatu dari foto',
-        'Kertas kado kraft cokelat / kalender bekas',
-        'Lem kertas / double tape busa',
+        '1 buah kotak kardus sepatu / kardus paket dari foto',
+        'Kardus tambahan untuk papan sekat pemisah',
+        'Kertas kado kraft cokelat / kertas koran bekas bermotif vintage',
+        'Lem kertas PVAc / double tape busa kuat',
       ],
-      toolsNeeded: ['Cutter tajam', 'Penggaris besi', 'Pensil'],
+      toolsNeeded: ['Cutter tajam', 'Penggaris besi panjang', 'Pensil & alas potong (cutting mat)'],
       steps: [
         {
           stepNumber: 1,
-          title: 'Desain & Potong Kompartemen Sekat',
-          instruction: 'Bagi kotak menjadi 3 zona: slot buku catatan tegak, baki alat tulis horizontal, dan dock dudukan HP.',
-          tip: 'Potong sudut miring 45 derajat pada sisi depan agar pulpen dan sticky notes mudah diambil.',
+          title: 'Desain Pola & Pemotongan Sekat Bertingkat',
+          instruction: 'Gunting tutup kardus menjadi 2 bilah sekat berukuran pas dengan lebar kotak. Buat kemiringan 45 derajat pada sisi depan kardus utama agar pulpen dan sticky notes mudah dijangkau.',
+          tip: 'Gunakan penggaris besi saat memotong dengan cutter agar garis potongan tegak lurus sempurna tanpa serat robek.',
           timeMinutes: 8,
         },
         {
           stepNumber: 2,
-          title: 'Buat Jalur Kabel (Cable Pass-Through)',
-          instruction: 'Buat lubang oval 1x2 cm di bagian belakang zona dudukan HP untuk jalur colokan kabel charger.',
-          tip: 'Meja kost akan bebas dari kabel kusut berantakan!',
+          title: 'Pembuatan Slot Dudukan HP & Jalur Kabel Charger',
+          instruction: 'Buat lubang oval berukuran 1.5 x 3 cm di bagian bawah dinding belakang kotak untuk akses kepala kabel charger smartphone.',
+          tip: 'Dengan lubang ini, handphone dapat diisi daya dalam posisi berdiri tanpa ada kabel menjuntai berantakan.',
           timeMinutes: 5,
         },
         {
           stepNumber: 3,
-          title: 'Finishing Lapisan Kraft Estetik',
-          instruction: 'Lapisi seluruh permukaan kardus dengan kertas kraft cokelat atau kalender bekas bernuansa monokrom.',
-          tip: 'Gunakan lem tipis merata agar tidak bergelembung.',
+          title: 'Pelapisan Estetik Kertas Kraft & Perakitan Sekat',
+          instruction: 'Lapisi seluruh permukaan luar dan dalam kardus dengan kertas kraft cokelat menggunakan lem tipis merata. Rekatkan bilah sekat ke dasar kotak dengan lem atau double tape kuat.',
+          tip: 'Tekan permukaan kertas dengan kain kering agar tidak ada gelembung udara yang terperangkap.',
           timeMinutes: 7,
         },
       ],
-      stylingTips: 'Tambahkan label kecil bertuliskan font typewriter untuk memisahkan kategori notes, kalkulator, dan stationeries.',
-      safetyNote: 'Selalu gunakan alas potong (cutting mat/kayu) saat menggunakan cutter.',
+      stylingTips: 'Tempelkan label teks tipografi minimalis pada setiap sekat untuk memisahkan kategori notes, kalkulator, dan pensil.',
+      safetyNote: 'Selalu gunakan alas pemotong kayu/kardus tebal dan jangan menempatkan jari terlalu dekat dengan mata cutter.',
     };
   }
 
   // Universal smart creative fallback
   return {
-    detectedItemName: 'Sampah Daur Ulang Rumah Tangga',
-    detectedMaterialType: 'Material Sekunder & Kemasan Bekas',
-    projectName: 'Multi-Utility Eco-Chic Everyday Carry',
-    tagline: 'Karya upcycling fungsional dan trendi dari barang bekas rumah tangga harian.',
+    detectedItemName: 'Limbah Padat Rumah Tangga & Kemasan Produk',
+    detectedMaterialType: 'Secondary Composite & Rigid Recyclables',
+    detectedCondition: 'Material masih kokoh dan memiliki potensi struktur kuat untuk diolah kembali.',
+    projectName: 'Multi-Utility Eco-Chic Everyday Carry & Workspace Organizer',
+    tagline: 'Karya upcycling fungsional berdaya guna tinggi dari limbah kemasan rumah tangga harian.',
     vibe: 'Modern Eco-Minimalist',
+    productDescription: 'Wadah serbaguna fungsional berdaya tahan tinggi yang dirancang untuk merapikan perkakas harian, aksesori gadget, maupun dekorasi ruangan dengan sentuhan estetika kontemporer yang ramah lingkungan.',
     difficulty: skillLevel === 'Beginner' ? 'Super Easy (5 min)' : 'Moderate (Crafty)',
     timeEstimate: '15-25 Menit',
     estimatedValueIdr: 55000,
     co2SavedKg: 2.8,
     landfillDivertedGrams: 260,
     pointsRewarded: 70,
+    benefits: {
+      economic: 'Menghemat pengeluaran belanja produk wadah & organizer baru sebesar Rp 40.000 - Rp 70.000.',
+      environmental: 'Mengurangi volume sampah ke TPA dan mengurangi jejak karbon produksi barang baru.',
+      practical: 'Menghadirkan wadah penyimpanan praktis yang pas untuk kebutuhan spesifik meja atau tas kamu.',
+    },
     requiredMaterials: [
       'Barang bekas utama dari foto / wadah kemasan',
       'Tali / perekat / bahan pengikat bekas',
@@ -178,16 +207,16 @@ function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) 
       {
         stepNumber: 2,
         title: 'Pembentukan Struktur & Perakitan Fungsional',
-        instruction: 'Bentuk material sesuai ergonomi penggunaan sehari-hari, lalu rekatkan sambungan dengan kuat.',
-        tip: 'Pastikan titik tumpu utama diberi penguat ganda.',
-        timeMinutes: 10,
+        instruction: 'Bentuk bagian utama sesuai pola fungsional yang diinginkan dan rekatkan sambungan dengan kuat.',
+        tip: 'Berikan waktu perekat kering sempurna selama 3-5 menit sebelum diisi beban.',
+        timeMinutes: 8,
       },
       {
         stepNumber: 3,
-        title: 'Detailing Estetika & Sentuhan Akhir',
-        instruction: 'Rapikan sudut-sudut tajam dan tambahkan elemen personalisasi sesuai gaya kesukaanmu.',
-        tip: 'Karya siap dipamerkan di feed komunitas BumiKita!',
-        timeMinutes: 5,
+        title: 'Finishing & Personalisasi Estetik',
+        instruction: 'Hias bagian luar dengan elemen dekoratif sederhana untuk meningkatkan nilai visual dan estetikanya.',
+        tip: 'Karya buatan tangan yang rapi memiliki nilai seni dan nilai jual tinggi di market komunitas.',
+        timeMinutes: 6,
       },
     ],
     stylingTips: 'Tonjolkan tekstur asli material daur ulang untuk menunjukkan authenticity zero-waste craftsmanship.',
@@ -219,16 +248,32 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const systemInstruction = `You are "BumiKita AI Vision & Maker", the world's premier Upcycling & Waste-to-Worth expert designed for Gen Z (15-24 years old, students and young creators).
+    const systemInstruction = `You are "BumiKita AI Vision & Maker", an institutional-grade Upcycling Engineering & Zero-Waste Design Specialist.
 
-CRITICAL VISION & RECOGNITION MANDATE:
-1. When an image is provided, YOU MUST VISUALLY INSPECT the photo to autonomously identify what discarded item/waste material is shown (e.g. old denim jeans, plastic bottles, boba cups, shoe boxes, cardboard, snack packaging, fabric scraps, electronics, tin cans, glass jars, etc.), noting its shape, color, and condition.
-2. The user only needs to describe WHAT THEY WANT TO MAKE (e.g. "Ingin dijadikan tas selempang", "Jadikan pot tanaman estetik", "Bikin organizer meja kost", or even leave it completely empty / blank). THE USER DOES NOT NEED TO DESCRIBE THE WASTE MATERIAL—you must understand it directly from the image!
-3. Formulate the most practical, trendy, high-value step-by-step DIY upcycling blueprint that transforms the visually detected waste item into the user's desired item (or your best recommended creative Gen-Z creation if the prompt is empty).
-4. Accurately set 'detectedItemName' (e.g. "Celana Jeans Denim Bekas") and 'detectedMaterialType' (e.g. "Denim & Katun Tekstil").
-5. Provide clear, realistic instructions tailored to the chosen skill level (${skillLevel}).
-6. Keep the language in friendly, modern Indonesian (Gen-Z friendly, free of preachy jargon).
-7. Quantify the positive ecological impact (CO2 saved, grams of landfill diverted) and estimated monetary resale value in IDR.`;
+CRITICAL VISION, RECOGNITION & CRAFTSMANSHIP MANDATES:
+1. AUTONOMOUS VISUAL INSPECTION:
+   When an image is provided, carefully inspect the photo to identify:
+   - The exact discarded object/waste (e.g., 'Celana Jeans Denim Robek', 'Botol Plastik PET 600ml', 'Kotak Kardus Sepatu Bekas', 'Kemasan Kopi/Snack Sachet Metalized').
+   - Material composition (e.g., 'Heavy Denim Cotton', 'Polietilena Tereftalat (PET #1)', 'Corrugated Cardboard', 'Aluminium Foil Composite').
+   - Physical condition (e.g., 'Kain tebal tanpa noda jamur', 'Plastik transparan elastis', 'Karton berstruktur kaku').
+
+2. PRECISE TARGET PRODUCT TRANSLATION:
+   - The user only describes WHAT PRODUCT THEY WANT TO MAKE (e.g., "Ingin jadi tas selempang", "Jadikan pot tanaman estetik", "Bikin organizer meja kost"), OR leaves it blank.
+   - You MUST adapt the visually detected waste materials to build EXACTLY what they requested (or the most practical, trendy, high-value creation if left blank).
+   - Provide a comprehensive, accurate 'productDescription' explaining what is being built, its exact physical dimensions/form, primary functions, and why it is practical.
+
+3. DETAILED ACTIONABLE STEPS:
+   - Every single step must be clear, sequential, and realistic with exact measurements (in cm/mm) and execution guidance.
+   - Include specific tools and secondary materials needed (e.g., jenis lem yang tepat, ukuran gunting/cutter, jarum & benang).
+
+4. MULTI-DIMENSIONAL BENEFITS:
+   - 'benefits.economic': Concrete calculation of money saved versus buying a new retail item.
+   - 'benefits.environmental': Tangible waste diversion and reduction of carbon/water footprint.
+   - 'benefits.practical': Everyday convenience and functional utility for the user.
+
+5. TONE & ACCURACY:
+   - Deliver instructions in clear, modern, encouraging Indonesian tailored for students, makers, and young creators.
+   - Provide realistic estimates for resale value (in IDR), CO2 saved (kg), and diverted landfill weight (grams).`;
 
     const contentsPayload: any = [];
 
@@ -244,16 +289,16 @@ CRITICAL VISION & RECOGNITION MANDATE:
 
     const userTextPrompt = imageBase64
       ? `[MULTIMODAL AI VISION TASK]
-1. Visually identify the discarded waste item and material shown in this photo.
+1. Visually identify the discarded waste item, its material type, and its physical condition from this photo.
 2. What the user wants to make: "${prompt?.trim() || 'Rekomendasikan kreasi upcycling paling estetik, fungsional, dan bernilai tinggi dari barang bekas di foto ini'}"
 3. Maker Skill Level: ${skillLevel}
 
-Generate a complete, structured upcycling DIY blueprint transforming the visual waste item from the photo into the requested creation.`
+Generate a complete, highly accurate, step-by-step DIY upcycling blueprint with detailed product breakdown, required tools, comprehensive steps with tips, styling guidance, and 3-pillar benefits (economic, environmental, practical).`
       : `Transform this discarded item/waste into an amazing upcycle project:
-User Goal / Description: "${prompt || 'Suggest the best creative upcycling project for this item'}"
+User Goal / What to build: "${prompt || 'Suggest the best creative upcycling project for this item'}"
 Target Skill Level: ${skillLevel}
 
-Generate a detailed, step-by-step upcycling plan with materials, tools, aesthetic styling tips, safety advice, and eco-metrics.`;
+Generate a highly accurate, detailed, step-by-step upcycling plan with materials, tools, aesthetic styling tips, safety advice, benefits analysis, and eco-metrics.`;
 
     contentsPayload.push({
       text: userTextPrompt,
@@ -278,6 +323,10 @@ Generate a detailed, step-by-step upcycling plan with materials, tools, aestheti
                 type: Type.STRING,
                 description: 'Detected material category (e.g. "Denim / Tekstil Katun", "Plastik PET Polimer", "Corrugated Cardboard")',
               },
+              detectedCondition: {
+                type: Type.STRING,
+                description: 'Physical condition of the waste item (e.g. "Kain tebal kokoh, saku utuh", "Plastik bersih kedap air")',
+              },
               projectName: {
                 type: Type.STRING,
                 description: 'Catchy, creative name for the upcycled product (e.g., "Upcycled Denim Crossbody Tech Pouch")',
@@ -289,6 +338,10 @@ Generate a detailed, step-by-step upcycling plan with materials, tools, aestheti
               vibe: {
                 type: Type.STRING,
                 description: 'Aesthetic style: e.g., "Y2K Gorpcore", "Clean Minimalist", "Cozy Cottagecore", "Aesthetic Desk Minimal"',
+              },
+              productDescription: {
+                type: Type.STRING,
+                description: 'Detailed explanation of what the product is, its dimensions, utility, and functions',
               },
               difficulty: {
                 type: Type.STRING,
@@ -313,6 +366,15 @@ Generate a detailed, step-by-step upcycling plan with materials, tools, aestheti
               pointsRewarded: {
                 type: Type.NUMBER,
                 description: 'Daun Points rewarded to user upon completing this DIY (between 30 and 120)',
+              },
+              benefits: {
+                type: Type.OBJECT,
+                properties: {
+                  economic: { type: Type.STRING, description: 'Economic savings and financial benefits' },
+                  environmental: { type: Type.STRING, description: 'Environmental and ecological conservation benefits' },
+                  practical: { type: Type.STRING, description: 'Everyday practicality and lifestyle convenience benefits' },
+                },
+                required: ['economic', 'environmental', 'practical'],
               },
               requiredMaterials: {
                 type: Type.ARRAY,
@@ -353,12 +415,14 @@ Generate a detailed, step-by-step upcycling plan with materials, tools, aestheti
               'projectName',
               'tagline',
               'vibe',
+              'productDescription',
               'difficulty',
               'timeEstimate',
               'estimatedValueIdr',
               'co2SavedKg',
               'landfillDivertedGrams',
               'pointsRewarded',
+              'benefits',
               'requiredMaterials',
               'toolsNeeded',
               'steps',

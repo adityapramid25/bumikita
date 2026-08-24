@@ -58,18 +58,27 @@ export interface UpcycleStep {
   timeMinutes: number;
 }
 
+export interface UpcycleProjectBenefits {
+  economic: string; // e.g. "Hemat pengeluaran Rp 75.000 untuk tas gadget baru"
+  environmental: string; // e.g. "Mencegah 420g kain denim menumpuk 200+ tahun di TPA Bantar Gebang"
+  practical: string; // e.g. "Memberikan kompartemen pelindung aman anti baret untuk HP dan TWS"
+}
+
 export interface UpcycleProjectResult {
   detectedItemName?: string;
   detectedMaterialType?: string;
+  detectedCondition?: string; // e.g. "Kondisi kain tebal 90%, sedikit robek lutut"
   projectName: string;
   tagline: string;
   vibe: string; // e.g. "Y2K Gorpcore", "Cozy Cottagecore", "Minimalist Cyber-Green"
+  productDescription: string; // Detail deskripsi produk apa yang dibuat & fungsinya
   difficulty: 'Super Easy (5 min)' | 'Moderate (Crafty)' | 'Pro Maker' | string;
   timeEstimate: string;
   estimatedValueIdr: number;
   co2SavedKg: number;
   landfillDivertedGrams: number;
   pointsRewarded: number;
+  benefits?: UpcycleProjectBenefits;
   requiredMaterials: string[];
   toolsNeeded: string[];
   steps: UpcycleStep[];
