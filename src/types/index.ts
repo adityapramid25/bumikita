@@ -59,10 +59,12 @@ export interface UpcycleStep {
 }
 
 export interface UpcycleProjectResult {
+  detectedItemName?: string;
+  detectedMaterialType?: string;
   projectName: string;
   tagline: string;
   vibe: string; // e.g. "Y2K Gorpcore", "Cozy Cottagecore", "Minimalist Cyber-Green"
-  difficulty: 'Super Easy (5 min)' | 'Moderate (Crafty)' | 'Pro Maker';
+  difficulty: 'Super Easy (5 min)' | 'Moderate (Crafty)' | 'Pro Maker' | string;
   timeEstimate: string;
   estimatedValueIdr: number;
   co2SavedKg: number;

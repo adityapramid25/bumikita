@@ -715,17 +715,67 @@ export default function WasteToWorthScanner() {
           <div className="lg:col-span-7 space-y-5 flex flex-col justify-between">
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-extrabold text-[#1A4D3A] uppercase tracking-wider mb-2">
-                  2. Jelaskan Barang Bekas & Keinginanmu
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-extrabold text-[#1A4D3A] uppercase tracking-wider">
+                    {selectedImage ? '2. Mau Dibuat Jadi Barang Apa? (Opsional)' : '2. Mau Dibuat Jadi Apa? / Jelaskan Ide'}
+                  </label>
+                  {selectedImage && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/30">
+                      📸 Foto Siap Dideteksi Otomatis
+                    </span>
+                  )}
+                </div>
+
+                {selectedImage && (
+                  <p className="text-[11px] text-[#357A59] font-semibold mb-2 bg-[#EBF4EE] p-2.5 rounded-xl border border-[#6DB677]/30 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#357A59] flex-shrink-0" />
+                    <span>
+                      AI akan otomatis mengenali jenis sampah dari foto. Cukup ketik barang yang ingin dibuat, atau pilih chip di bawah.
+                    </span>
+                  </p>
+                )}
+
                 <textarea
                   id="scanner-prompt-input"
-                  rows={4}
+                  rows={3}
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Contoh: Saya punya celana jeans robek di lutut dan beberapa kancing cadangan. Ingin dijadikan tas selempang kecil atau pouch alat tulis kampus tanpa ribet."
+                  placeholder={
+                    selectedImage
+                      ? 'Contoh: "Ingin jadi tas selempang kecil", "Jadikan pot tanaman estetik", "Bikin organizer meja kost", atau biarkan kosong untuk rekomendasi AI terbaik dari fotomu.'
+                      : 'Contoh: "Ingin buat tas selempang dari celana jeans bekas robek", "Bikin pot siram otomatis dari botol plastik", dll.'
+                  }
                   className="w-full p-4 rounded-2xl bg-[#FAF8F5] shadow-clay-inset border border-white text-sm text-[#1A4D3A] placeholder-[#1A4D3A]/40 focus:outline-none focus:ring-2 focus:ring-[#357A59]"
                 />
+
+                {/* Quick Goal Intent Chips */}
+                <div className="mt-2.5 space-y-1.5">
+                  <span className="text-[10px] font-bold text-[#1A4D3A]/70 uppercase tracking-wider">
+                    Ide Cepat Kreasi:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: '✨ Rekomendasi AI Terbaik', value: '' },
+                      { label: '👜 Tas / Pouch Selempang', value: 'Ingin dijadikan tas selempang / pouch gadget estetik' },
+                      { label: '🪴 Pot & Dekorasi Kamar', value: 'Ingin dijadikan pot tanaman estetik / dekorasi meja kamar kost' },
+                      { label: '📦 Organizer Meja Belajar', value: 'Ingin dijadikan organizer alat tulis dan holder handphone' },
+                      { label: '💡 Case & Dudukan Gadget', value: 'Ingin dijadikan dudukan handphone / pelindung kabel charger' },
+                    ].map((chip, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setPrompt(chip.value)}
+                        className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                          prompt === chip.value
+                            ? 'bg-[#357A59] text-white border-[#357A59] shadow-clay-green'
+                            : 'bg-[#FAF8F5] border-white text-[#1A4D3A]/80 shadow-clay-button hover:bg-[#EDE8E0]'
+                        }`}
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Skill Level Selector */}
@@ -795,12 +845,16 @@ export default function WasteToWorthScanner() {
               {isLoading ? (
                 <>
                   <RefreshCw className="w-5 h-5 animate-spin" />
-                  <span>Gemini AI Sedang Merancang Resep Upcycle...</span>
+                  <span>Gemini AI Sedang Menganalisis Foto & Merancang Resep...</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-5 h-5 text-[#FF9E20] fill-[#FF9E20]" />
-                  <span>Generate Blueprint Upcycle dengan Gemini AI</span>
+                  <span>
+                    {selectedImage
+                      ? 'Analisis Foto & Rancang Blueprint Upcycle'
+                      : 'Generate Blueprint Upcycle dengan Gemini AI'}
+                  </span>
                 </>
               )}
             </button>
@@ -811,6 +865,30 @@ export default function WasteToWorthScanner() {
       {/* Generated Upcycle Blueprint Output */}
       {result && (
         <div className="bg-[#FAF8F5] rounded-[32px] p-6 sm:p-10 shadow-clay-card border border-white space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* AI Vision Detection Banner */}
+          {result.detectedItemName && (
+            <div className="p-4 rounded-2xl bg-[#E8F2ED] border border-[#357A59]/30 shadow-clay-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#357A59] text-white flex items-center justify-center flex-shrink-0 shadow-clay-sm">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-[#357A59] uppercase tracking-wider">
+                    Hasil Deteksi AI Vision dari Foto:
+                  </p>
+                  <p className="text-sm font-black text-[#1A4D3A]">
+                    {result.detectedItemName}
+                  </p>
+                </div>
+              </div>
+              {result.detectedMaterialType && (
+                <span className="self-start sm:self-auto px-3 py-1 rounded-full bg-white text-[#1A4D3A] text-xs font-bold border border-[#1A4D3A]/10 shadow-clay-pill">
+                  Material: {result.detectedMaterialType}
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Blueprint Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[#1A4D3A]/10">
             <div className="space-y-2">

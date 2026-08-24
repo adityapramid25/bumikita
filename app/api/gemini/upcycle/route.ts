@@ -5,10 +5,12 @@ import { Type } from '@google/genai';
 function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) {
   const p = (promptText || '').toLowerCase();
   
-  if (p.includes('jeans') || p.includes('celana') || p.includes('denim') || p.includes('kain') || p.includes('baju') || p.includes('kaos')) {
+  if (p.includes('jeans') || p.includes('celana') || p.includes('denim') || p.includes('kain') || p.includes('baju') || p.includes('kaos') || p.includes('tas') || p.includes('pouch') || p.includes('fashion') || p.includes('selempang')) {
     return {
+      detectedItemName: 'Pakaian & Tekstil Bekas (Jeans / Kain Perca)',
+      detectedMaterialType: 'Denim / Katun Tekstil Daur Ulang',
       projectName: 'Upcycled Patchwork Denim Tech Sling & Pouch',
-      tagline: 'Mengubah sisa denim usang menjadi tas selempang streetwear Y2K fungsional untuk gadget kampus.',
+      tagline: 'Mengubah sisa kain/denim usang menjadi tas selempang streetwear Y2K fungsional untuk gadget kampus.',
       vibe: 'Y2K Gorpcore & Campus Streetwear',
       difficulty: skillLevel === 'Beginner' ? 'Super Easy (Tanpa Jahit / Lem Kain)' : 'Moderate (Crafty Stitching)',
       timeEstimate: skillLevel === 'Beginner' ? '15-20 Menit' : '25-35 Menit',
@@ -17,7 +19,7 @@ function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) 
       landfillDivertedGrams: 420,
       pointsRewarded: 85,
       requiredMaterials: [
-        'Celana jeans bekas / kain perca pakaian',
+        'Kain jeans/pakaian bekas dari foto',
         'Tali webbing / sabuk bekas untuk strap tas',
         '1 buah kancing cadangan / magnet penutup',
         'Furing dalaman dari payung rusak / kain tipis',
@@ -26,15 +28,15 @@ function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) 
       steps: [
         {
           stepNumber: 1,
-          title: 'Pemotongan Pola Kantong Belakang',
-          instruction: 'Gunting bagian saku belakang celana jeans beserta 2 cm sisa kain di sekelilingnya untuk dijadikan kompartemen utama kartu dan HP.',
+          title: 'Pemotongan Pola Kantong & Badan Tas',
+          instruction: 'Gunting bagian kain jeans/pakaian beserta 2 cm sisa kampuh di sekelilingnya untuk dijadikan kompartemen utama kartu dan HP.',
           tip: 'Pertahankan jahitan asli saku untuk memberikan estetika deconstructed vintage.',
           timeMinutes: 5,
         },
         {
           stepNumber: 2,
           title: 'Pemasangan Tali Selempang (Strap)',
-          instruction: 'Gunting bagian pinggang jeans (waistband) memanjang atau gunakan tali serut hoodie lama sebagai strap selempang.',
+          instruction: 'Gunting bagian pinggang jeans memanjang atau gunakan tali serut hoodie lama sebagai strap selempang.',
           tip: 'Gunakan simpul silang ganda agar strap kuat menopang beban HP dan dompet.',
           timeMinutes: 8,
         },
@@ -51,10 +53,12 @@ function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) 
     };
   }
 
-  if (p.includes('botol') || p.includes('plastik') || p.includes('pet') || p.includes('cup') || p.includes('boba') || p.includes('gelas')) {
+  if (p.includes('botol') || p.includes('plastik') || p.includes('pet') || p.includes('cup') || p.includes('boba') || p.includes('gelas') || p.includes('pot') || p.includes('tanaman')) {
     return {
+      detectedItemName: 'Wadah Plastik Bekas Minuman (Botol PET / Cup Boba)',
+      detectedMaterialType: 'Plastik Polimer PET / PP Transparan',
       projectName: 'Self-Watering Minimalist Desk Planter & Stationery Pot',
-      tagline: 'Pot tanaman estetik otomatis siram dan tempat alat tulis dari botol & gelas boba bekas.',
+      tagline: 'Pot tanaman estetik otomatis siram dan tempat alat tulis dari wadah plastik bekas.',
       vibe: 'Clean Minimalist & Botanical Campus',
       difficulty: 'Super Easy (5 min)',
       timeEstimate: '10-15 Menit',
@@ -63,7 +67,7 @@ function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) 
       landfillDivertedGrams: 180,
       pointsRewarded: 60,
       requiredMaterials: [
-        '1-2 botol plastik PET bekas / cup boba transparan',
+        'Botol plastik / cup kemasan bekas dari foto',
         'Sumbu kompor / tali kain katun / benang wol tebal',
         'Tanaman hias kecil (sukulen / sirih gading)',
         'Media tanam (tanah / sekam bakar)',
@@ -97,8 +101,10 @@ function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) 
     };
   }
 
-  if (p.includes('kardus') || p.includes('kotak') || p.includes('karton') || p.includes('box') || p.includes('sepatu')) {
+  if (p.includes('kardus') || p.includes('kotak') || p.includes('karton') || p.includes('box') || p.includes('sepatu') || p.includes('organizer') || p.includes('meja')) {
     return {
+      detectedItemName: 'Kardus Karton / Kotak Kemasan Bekas',
+      detectedMaterialType: 'Corrugated Cardboard & Kraft Paper',
       projectName: 'Modular Aesthetic Desk Organizer & Tech Charging Dock',
       tagline: 'Organizer meja belajar modular bertingkat dengan slot manajemen kabel HP dan laptop.',
       vibe: 'Aesthetic Scandinavian Workspace',
@@ -109,8 +115,8 @@ function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) 
       landfillDivertedGrams: 380,
       pointsRewarded: 75,
       requiredMaterials: [
-        'Kardus bekas kemasan online / kotak sepatu',
-        'Kertas kado kraft cokelat / koran bekas',
+        'Kardus bekas kemasan paket online / kotak sepatu dari foto',
+        'Kertas kado kraft cokelat / kalender bekas',
         'Lem kertas / double tape busa',
       ],
       toolsNeeded: ['Cutter tajam', 'Penggaris besi', 'Pensil'],
@@ -118,7 +124,7 @@ function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) 
         {
           stepNumber: 1,
           title: 'Desain & Potong Kompartemen Sekat',
-          instruction: 'Bagi kotak sepatu menjadi 3 zona: slot buku catatan tegak, baki alat tulis horizontal, dan dock dudukan HP.',
+          instruction: 'Bagi kotak menjadi 3 zona: slot buku catatan tegak, baki alat tulis horizontal, dan dock dudukan HP.',
           tip: 'Potong sudut miring 45 derajat pada sisi depan agar pulpen dan sticky notes mudah diambil.',
           timeMinutes: 8,
         },
@@ -144,6 +150,8 @@ function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) 
 
   // Universal smart creative fallback
   return {
+    detectedItemName: 'Sampah Daur Ulang Rumah Tangga',
+    detectedMaterialType: 'Material Sekunder & Kemasan Bekas',
     projectName: 'Multi-Utility Eco-Chic Everyday Carry',
     tagline: 'Karya upcycling fungsional dan trendi dari barang bekas rumah tangga harian.',
     vibe: 'Modern Eco-Minimalist',
@@ -154,7 +162,7 @@ function generateSmartFallbackBlueprint(promptText: string, skillLevel: string) 
     landfillDivertedGrams: 260,
     pointsRewarded: 70,
     requiredMaterials: [
-      promptText ? `Barang bekas (${promptText.slice(0, 40)})` : 'Barang bekas rumah tangga / wadah kemasan',
+      'Barang bekas utama dari foto / wadah kemasan',
       'Tali / perekat / bahan pengikat bekas',
       'Aksen dekoratif (stiker, cat, atau kain perca)',
     ],
@@ -211,12 +219,16 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const systemInstruction = `You are "BumiKita AI Maker", the world's most creative and practical Upcycling & Waste-to-Worth expert designed for Gen Z (15-24 years old, high school and college students).
-Your mission is to transform household waste, old clothing, scrap plastic, cardboard boxes, and discarded items into trendy, functional, aesthetic, high-value DIY creations that Gen Z loves (e.g. Y2K streetwear, aesthetic room decor, campus desk organizers, waterproof pouches, tech cases).
+    const systemInstruction = `You are "BumiKita AI Vision & Maker", the world's premier Upcycling & Waste-to-Worth expert designed for Gen Z (15-24 years old, students and young creators).
 
-Always provide clear, realistic, and actionable instructions tailored to the user's chosen skill level (${skillLevel}).
-Keep tone enthusiastic, eco-conscious, creative, modern, and practical (Indonesian / English bilingual friendly, using clear terms).
-Quantify the positive ecological impact (CO2 saved, grams of landfill diverted) and estimated monetary value if sold on BumiKita market.`;
+CRITICAL VISION & RECOGNITION MANDATE:
+1. When an image is provided, YOU MUST VISUALLY INSPECT the photo to autonomously identify what discarded item/waste material is shown (e.g. old denim jeans, plastic bottles, boba cups, shoe boxes, cardboard, snack packaging, fabric scraps, electronics, tin cans, glass jars, etc.), noting its shape, color, and condition.
+2. The user only needs to describe WHAT THEY WANT TO MAKE (e.g. "Ingin dijadikan tas selempang", "Jadikan pot tanaman estetik", "Bikin organizer meja kost", or even leave it completely empty / blank). THE USER DOES NOT NEED TO DESCRIBE THE WASTE MATERIAL—you must understand it directly from the image!
+3. Formulate the most practical, trendy, high-value step-by-step DIY upcycling blueprint that transforms the visually detected waste item into the user's desired item (or your best recommended creative Gen-Z creation if the prompt is empty).
+4. Accurately set 'detectedItemName' (e.g. "Celana Jeans Denim Bekas") and 'detectedMaterialType' (e.g. "Denim & Katun Tekstil").
+5. Provide clear, realistic instructions tailored to the chosen skill level (${skillLevel}).
+6. Keep the language in friendly, modern Indonesian (Gen-Z friendly, free of preachy jargon).
+7. Quantify the positive ecological impact (CO2 saved, grams of landfill diverted) and estimated monetary resale value in IDR.`;
 
     const contentsPayload: any = [];
 
@@ -230,8 +242,15 @@ Quantify the positive ecological impact (CO2 saved, grams of landfill diverted) 
       });
     }
 
-    const userTextPrompt = `Transform this discarded item/waste into an amazing upcycle project:
-User Description/Context: "${prompt || 'Suggest the best creative upcycling project for this discarded item'}"
+    const userTextPrompt = imageBase64
+      ? `[MULTIMODAL AI VISION TASK]
+1. Visually identify the discarded waste item and material shown in this photo.
+2. What the user wants to make: "${prompt?.trim() || 'Rekomendasikan kreasi upcycling paling estetik, fungsional, dan bernilai tinggi dari barang bekas di foto ini'}"
+3. Maker Skill Level: ${skillLevel}
+
+Generate a complete, structured upcycling DIY blueprint transforming the visual waste item from the photo into the requested creation.`
+      : `Transform this discarded item/waste into an amazing upcycle project:
+User Goal / Description: "${prompt || 'Suggest the best creative upcycling project for this item'}"
 Target Skill Level: ${skillLevel}
 
 Generate a detailed, step-by-step upcycling plan with materials, tools, aesthetic styling tips, safety advice, and eco-metrics.`;
@@ -251,6 +270,14 @@ Generate a detailed, step-by-step upcycling plan with materials, tools, aestheti
           responseSchema: {
             type: Type.OBJECT,
             properties: {
+              detectedItemName: {
+                type: Type.STRING,
+                description: 'Identified waste item from photo (e.g. "Celana Jeans Denim Bekas", "Botol Plastik PET 600ml", "Kardus Sepatu Bekas")',
+              },
+              detectedMaterialType: {
+                type: Type.STRING,
+                description: 'Detected material category (e.g. "Denim / Tekstil Katun", "Plastik PET Polimer", "Corrugated Cardboard")',
+              },
               projectName: {
                 type: Type.STRING,
                 description: 'Catchy, creative name for the upcycled product (e.g., "Upcycled Denim Crossbody Tech Pouch")',
@@ -321,6 +348,8 @@ Generate a detailed, step-by-step upcycling plan with materials, tools, aestheti
               },
             },
             required: [
+              'detectedItemName',
+              'detectedMaterialType',
               'projectName',
               'tagline',
               'vibe',
