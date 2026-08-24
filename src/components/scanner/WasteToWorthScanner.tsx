@@ -23,8 +23,15 @@ import {
   SwitchCamera,
   X,
   Zap,
+  Smartphone,
+  Square,
+  RectangleHorizontal,
+  RectangleVertical,
+  Maximize2,
   Image as ImageIcon
 } from 'lucide-react';
+
+type CameraAspectRatio = '1:1' | '4:3' | '16:9' | '9:16';
 
 export default function WasteToWorthScanner() {
   const { addDaunPoints, addCommunityPost } = useEco();
@@ -42,8 +49,9 @@ export default function WasteToWorthScanner() {
   // Camera State
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
+  const [aspectRatio, setAspectRatio] = useState<CameraAspectRatio>('4:3');
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
+  const [hasMultipleCameras, setHasMultipleCameras] = useState(true);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -89,19 +97,31 @@ export default function WasteToWorthScanner() {
         throw new Error('Fitur kamera tidak didukung di browser ini. Silakan gunakan upload foto.');
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: facing,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: facing },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          audio: false,
+        });
+      } catch {
+        // Fallback for strict browsers
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: facing,
+          },
+          audio: false,
+        });
+      }
 
       streamRef.current = stream;
+      setCameraFacing(facing);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.play().catch(() => {});
       }
       setIsCameraActive(true);
     } catch (err: any) {
@@ -119,8 +139,12 @@ export default function WasteToWorthScanner() {
 
   const flipCamera = () => {
     const nextFacing = cameraFacing === 'environment' ? 'user' : 'environment';
-    setCameraFacing(nextFacing);
     startCamera(nextFacing);
+  };
+
+  const switchFacing = (facing: 'environment' | 'user') => {
+    if (cameraFacing === facing && isCameraActive) return;
+    startCamera(facing);
   };
 
   const capturePhoto = () => {
@@ -128,18 +152,63 @@ export default function WasteToWorthScanner() {
     const video = videoRef.current;
     const canvas = canvasRef.current || document.createElement('canvas');
 
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    const videoWidth = video.videoWidth || 1280;
+    const videoHeight = video.videoHeight || 720;
+
+    // Calculate crop rectangle according to chosen aspect ratio
+    let targetRatio = 4 / 3;
+    if (aspectRatio === '1:1') targetRatio = 1 / 1;
+    else if (aspectRatio === '4:3') targetRatio = 4 / 3;
+    else if (aspectRatio === '16:9') targetRatio = 16 / 9;
+    else if (aspectRatio === '9:16') targetRatio = 9 / 16;
+
+    const sourceRatio = videoWidth / videoHeight;
+
+    let cropWidth = videoWidth;
+    let cropHeight = videoHeight;
+    let cropX = 0;
+    let cropY = 0;
+
+    if (sourceRatio > targetRatio) {
+      // Source video is wider than target ratio -> crop horizontally
+      cropWidth = videoHeight * targetRatio;
+      cropHeight = videoHeight;
+      cropX = (videoWidth - cropWidth) / 2;
+      cropY = 0;
+    } else {
+      // Source video is taller than target ratio -> crop vertically
+      cropWidth = videoWidth;
+      cropHeight = videoWidth / targetRatio;
+      cropX = 0;
+      cropY = (videoHeight - cropHeight) / 2;
+    }
+
+    canvas.width = Math.round(cropWidth);
+    canvas.height = Math.round(cropHeight);
 
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      // If front camera, flip horizontally for mirror effect
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // If user/selfie camera, mirror horizontally for natural photo preview
       if (cameraFacing === 'user') {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
       }
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+
+      ctx.drawImage(
+        video,
+        cropX,
+        cropY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
       setSelectedImage(dataUrl);
       stopCamera();
     }
@@ -297,70 +366,137 @@ export default function WasteToWorthScanner() {
 
             {/* LIVE CAMERA VIEWFINDER */}
             {isCameraActive ? (
-              <div className="relative rounded-2xl overflow-hidden shadow-clay-card border-2 border-[#357A59] bg-black aspect-video flex flex-col justify-between">
-                {/* Live Video Feed */}
-                <video
-                  ref={videoRef}
-                  playsInline
-                  autoPlay
-                  muted
-                  className={`w-full h-full object-cover ${cameraFacing === 'user' ? 'scale-x-[-1]' : ''}`}
-                />
-
-                {/* Animated Scanner Laser Overlay */}
-                <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4">
-                  {/* Corner Guides */}
-                  <div className="flex justify-between">
-                    <div className="w-6 h-6 border-t-2 border-l-2 border-[#6DB677] rounded-tl-lg" />
-                    <div className="w-6 h-6 border-t-2 border-r-2 border-[#6DB677] rounded-tr-lg" />
+              <div className="space-y-3">
+                {/* Viewfinder Aspect Ratio & Controls Toolbar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-[#FAF8F5] rounded-2xl border border-white shadow-clay-sm">
+                  {/* Aspect Ratio Selector Pills */}
+                  <div className="flex items-center gap-1 bg-[#EAE5DC]/60 p-1 rounded-xl">
+                    {(['1:1', '4:3', '16:9', '9:16'] as CameraAspectRatio[]).map((ratio) => (
+                      <button
+                        key={ratio}
+                        type="button"
+                        onClick={() => setAspectRatio(ratio)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
+                          aspectRatio === ratio
+                            ? 'bg-[#357A59] text-white shadow-clay-green'
+                            : 'text-[#1A4D3A]/70 hover:text-[#1A4D3A] hover:bg-white/50'
+                        }`}
+                      >
+                        {ratio}
+                      </button>
+                    ))}
                   </div>
 
-                  {/* Scanning Bar Animation */}
-                  <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-[#6DB677] to-transparent shadow-[0_0_8px_#6DB677] animate-pulse my-auto" />
+                  {/* Camera Facing Selector (Mobile / Front & Back) */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => switchFacing('environment')}
+                      title="Kamera Belakang / Utama"
+                      className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold flex items-center gap-1 transition-all cursor-pointer ${
+                        cameraFacing === 'environment'
+                          ? 'bg-[#1A4D3A] text-white shadow-clay-sm'
+                          : 'bg-[#FAF8F5] text-[#1A4D3A]/70 hover:bg-[#EDE8E0]'
+                      }`}
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Belakang</span>
+                    </button>
 
-                  <div className="flex justify-between items-end">
-                    <div className="w-6 h-6 border-b-2 border-l-2 border-[#6DB677] rounded-bl-lg" />
-                    <span className="text-[10px] font-bold text-white bg-black/60 px-2 py-0.5 rounded-full backdrop-blur-sm">
-                      Arahkan kamera ke sampah
-                    </span>
-                    <div className="w-6 h-6 border-b-2 border-r-2 border-[#6DB677] rounded-br-lg" />
+                    <button
+                      type="button"
+                      onClick={() => switchFacing('user')}
+                      title="Kamera Depan / Selfie"
+                      className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold flex items-center gap-1 transition-all cursor-pointer ${
+                        cameraFacing === 'user'
+                          ? 'bg-[#1A4D3A] text-white shadow-clay-sm'
+                          : 'bg-[#FAF8F5] text-[#1A4D3A]/70 hover:bg-[#EDE8E0]'
+                      }`}
+                    >
+                      <Smartphone className="w-3.5 h-3.5" />
+                      <span>Depan</span>
+                    </button>
                   </div>
                 </div>
 
-                {/* Top Camera Controls */}
-                <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
-                  {hasMultipleCameras && (
+                {/* Video Viewfinder Container with Dynamic Aspect Ratio */}
+                <div 
+                  className={`relative rounded-2xl overflow-hidden shadow-clay-card border-2 border-[#357A59] bg-black flex flex-col justify-between transition-all duration-300 ${
+                    aspectRatio === '1:1'
+                      ? 'aspect-square max-h-[380px] w-full'
+                      : aspectRatio === '4:3'
+                      ? 'aspect-[4/3] max-h-[380px] w-full'
+                      : aspectRatio === '16:9'
+                      ? 'aspect-video max-h-[360px] w-full'
+                      : 'aspect-[9/16] max-h-[460px] w-full max-w-[280px] mx-auto'
+                  }`}
+                >
+                  {/* Live Video Feed */}
+                  <video
+                    ref={videoRef}
+                    playsInline
+                    autoPlay
+                    muted
+                    className={`w-full h-full object-cover ${cameraFacing === 'user' ? 'scale-x-[-1]' : ''}`}
+                  />
+
+                  {/* Animated Scanner Laser Overlay */}
+                  <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-3.5">
+                    {/* Corner Guides */}
+                    <div className="flex justify-between">
+                      <div className="w-5 h-5 border-t-2 border-l-2 border-[#6DB677] rounded-tl-lg" />
+                      <div className="w-5 h-5 border-t-2 border-r-2 border-[#6DB677] rounded-tr-lg" />
+                    </div>
+
+                    {/* Scanning Bar Animation */}
+                    <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-[#6DB677] to-transparent shadow-[0_0_8px_#6DB677] animate-pulse my-auto" />
+
+                    <div className="flex justify-between items-end">
+                      <div className="w-5 h-5 border-b-2 border-l-2 border-[#6DB677] rounded-bl-lg" />
+                      <span className="text-[9px] sm:text-[10px] font-bold text-white bg-black/60 px-2 py-0.5 rounded-full backdrop-blur-sm">
+                        {aspectRatio} • {cameraFacing === 'environment' ? 'Belakang' : 'Depan'}
+                      </span>
+                      <div className="w-5 h-5 border-b-2 border-r-2 border-[#6DB677] rounded-tr-lg" />
+                    </div>
+                  </div>
+
+                  {/* Top Camera Controls Overlay */}
+                  <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10">
                     <button
                       type="button"
                       onClick={flipCamera}
-                      title="Ganti Kamera (Depan/Belakang)"
-                      className="p-2 rounded-full bg-black/60 text-white backdrop-blur-md hover:bg-black/80 transition-all cursor-pointer"
+                      title="Ganti Kamera (Depan / Belakang)"
+                      className="p-2 rounded-full bg-black/60 text-white backdrop-blur-md hover:bg-black/80 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
                     >
-                      <SwitchCamera className="w-4 h-4" />
+                      <SwitchCamera className="w-3.5 h-3.5" />
+                      <span className="text-[10px] font-bold pr-0.5 hidden sm:inline">
+                        {cameraFacing === 'environment' ? 'Ke Depan' : 'Ke Belakang'}
+                      </span>
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={stopCamera}
-                    title="Tutup Kamera"
-                    className="p-2 rounded-full bg-black/60 text-white backdrop-blur-md hover:bg-black/80 transition-all cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
 
-                {/* Bottom Snapshot Button Bar */}
-                <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-3 z-10">
-                  <button
-                    type="button"
-                    onClick={capturePhoto}
-                    id="btn-capture-camera"
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-earth text-white font-bold text-xs shadow-clay-green hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                  >
-                    <div className="w-3 h-3 rounded-full bg-[#FF9E20] animate-ping" />
-                    <Camera className="w-4 h-4" />
-                    <span>Ambil Foto Sampah</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={stopCamera}
+                      title="Tutup Kamera"
+                      className="p-2 rounded-full bg-black/60 text-white backdrop-blur-md hover:bg-black/80 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Bottom Snapshot Button Bar */}
+                  <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-3 z-10 px-3">
+                    <button
+                      type="button"
+                      onClick={capturePhoto}
+                      id="btn-capture-camera"
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-earth text-white font-bold text-xs shadow-clay-green hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <div className="w-3 h-3 rounded-full bg-[#FF9E20] animate-ping" />
+                      <Camera className="w-4 h-4" />
+                      <span>Ambil Foto ({aspectRatio})</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : selectedImage ? (
@@ -401,47 +537,91 @@ export default function WasteToWorthScanner() {
             ) : (
               /* DEFAULT CHOOSE CAMERA OR UPLOAD PANEL */
               <div className="space-y-3">
+                {/* Pre-camera Aspect Ratio Selector */}
+                <div className="flex items-center justify-between p-2.5 bg-[#FAF8F5] rounded-2xl border border-white shadow-clay-sm">
+                  <span className="text-[11px] font-extrabold text-[#1A4D3A] flex items-center gap-1.5 pl-1">
+                    <Maximize2 className="w-3.5 h-3.5 text-[#357A59]" />
+                    <span>Rasio Kamera:</span>
+                  </span>
+                  <div className="flex items-center gap-1 bg-[#EAE5DC]/60 p-1 rounded-xl">
+                    {(['1:1', '4:3', '16:9', '9:16'] as CameraAspectRatio[]).map((ratio) => (
+                      <button
+                        key={ratio}
+                        type="button"
+                        onClick={() => setAspectRatio(ratio)}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
+                          aspectRatio === ratio
+                            ? 'bg-[#357A59] text-white shadow-clay-green'
+                            : 'text-[#1A4D3A]/70 hover:text-[#1A4D3A] hover:bg-white/50'
+                        }`}
+                      >
+                        {ratio}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
-                  {/* Option A: Buka Kamera Langsung */}
+                  {/* Option A1: Buka Kamera Belakang (Utama / Mobile Environment) */}
                   <button
                     type="button"
-                    id="btn-open-camera"
+                    id="btn-open-camera-back"
                     onClick={() => startCamera('environment')}
-                    className="p-5 rounded-2xl bg-[#EBF4EE] border-2 border-[#6DB677]/40 text-center hover:bg-[#DDF0E2] transition-all group flex flex-col items-center justify-center gap-2 shadow-clay-button cursor-pointer"
+                    className="p-4 rounded-2xl bg-[#EBF4EE] border-2 border-[#6DB677]/40 text-center hover:bg-[#DDF0E2] transition-all group flex flex-col items-center justify-center gap-2 shadow-clay-button cursor-pointer"
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-earth text-white flex items-center justify-center shadow-clay-green group-hover:scale-110 transition-transform">
-                      <Camera className="w-6 h-6" />
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-earth text-white flex items-center justify-center shadow-clay-green group-hover:scale-110 transition-transform">
+                      <Camera className="w-5 h-5" />
                     </div>
                     <div>
                       <p className="text-xs font-extrabold text-[#1A4D3A]">
-                        Buka Kamera
+                        Kamera Belakang
                       </p>
                       <p className="text-[10px] text-[#357A59] font-semibold">
-                        Scan Langsung
+                        Scan Objek ({aspectRatio})
                       </p>
                     </div>
                   </button>
 
-                  {/* Option B: Upload File Gambar */}
+                  {/* Option A2: Buka Kamera Depan (Selfie / Mobile User) */}
                   <button
                     type="button"
-                    id="btn-upload-file"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-5 rounded-2xl bg-[#FAF8F5] border-2 border-dashed border-[#1A4D3A]/20 text-center hover:bg-[#EAE5DC] transition-all group flex flex-col items-center justify-center gap-2 shadow-clay-card cursor-pointer"
+                    id="btn-open-camera-front"
+                    onClick={() => startCamera('user')}
+                    className="p-4 rounded-2xl bg-[#EBF4EE] border-2 border-[#6DB677]/40 text-center hover:bg-[#DDF0E2] transition-all group flex flex-col items-center justify-center gap-2 shadow-clay-button cursor-pointer"
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-[#FAF8F5] text-[#357A59] flex items-center justify-center shadow-clay-button group-hover:scale-110 transition-transform">
-                      <Upload className="w-6 h-6" />
+                    <div className="w-10 h-10 rounded-2xl bg-[#FAF8F5] text-[#357A59] flex items-center justify-center shadow-clay-button group-hover:scale-110 transition-transform">
+                      <Smartphone className="w-5 h-5" />
                     </div>
                     <div>
                       <p className="text-xs font-extrabold text-[#1A4D3A]">
-                        Upload Galeri
+                        Kamera Depan
                       </p>
-                      <p className="text-[10px] text-[#1A4D3A]/60 font-semibold">
-                        JPG, PNG, WebP
+                      <p className="text-[10px] text-[#357A59] font-semibold">
+                        Mode Selfie ({aspectRatio})
                       </p>
                     </div>
                   </button>
                 </div>
+
+                {/* Option B: Upload File Gambar */}
+                <button
+                  type="button"
+                  id="btn-upload-file"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full p-3 rounded-2xl bg-[#FAF8F5] border-2 border-dashed border-[#1A4D3A]/20 text-center hover:bg-[#EAE5DC] transition-all group flex items-center justify-center gap-3 shadow-clay-card cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-[#FAF8F5] text-[#357A59] flex items-center justify-center shadow-clay-button group-hover:scale-110 transition-transform flex-shrink-0">
+                    <Upload className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-extrabold text-[#1A4D3A]">
+                      Atau Upload Gambar dari Galeri
+                    </p>
+                    <p className="text-[10px] text-[#1A4D3A]/60 font-semibold">
+                      Format PNG, JPG, WebP (Maksimal 5MB)
+                    </p>
+                  </div>
+                </button>
 
                 {cameraError && (
                   <div className="p-3 rounded-xl bg-[#FDE8E8] border border-[#DC2626]/30 text-[#DC2626] text-xs font-medium flex items-start gap-2">
