@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-cream: #F5F2ED;
+    --surface-clay: #FAF8F5;
+    --moss-dark: #1A4D3A;
+    --leaf-medium: #357A59;
+    --lime-fresh: #6DB677;
+    --warm-amber: #FF9E20;
+  }
+}
+
+/* Natural Tones Theme Core Classes */
+.clay-card {
+  background-color: var(--surface-clay, #FAF8F5);
+  border-radius: 32px;
+  box-shadow: 12px 16px 28px -4px rgba(26,77,58,0.08), -6px -6px 16px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.8), inset -2px -2px 4px rgba(26,77,58,0.04);
+}
+
+.clay-button {
+  background: linear-gradient(135deg, var(--leaf-medium, #357A59), var(--lime-fresh, #6DB677));
+  color: white;
+  border-radius: 20px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 6px 8px 16px rgba(26,77,58,0.12), -4px -4px 10px rgba(255,255,255,0.9), inset 1px 1px 3px rgba(255,255,255,0.7), inset -2px -2px 4px rgba(26,77,58,0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.clay-button:hover {
+  transform: translateY(-2px);
+}
+.clay-button:active {
+  transform: translateY(1px);
+  box-shadow: inset 2px 2px 6px rgba(26,77,58,0.2), inset -1px -1px 3px rgba(255,255,255,0.5);
+}
+
+.clay-inset {
+  background-color: var(--bg-cream, #F5F2ED);
+  border-radius: 24px;
+  box-shadow: inset 3px 3px 6px rgba(26,77,58,0.08), inset -3px -3px 6px rgba(255,255,255,0.8);
+}
+
+.impact-pill {
+  padding: 8px 16px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(109, 182, 119, 0.12);
+  color: var(--leaf-medium, #357A59);
+  display: inline-block;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  cursor: pointer;
+  color: var(--moss-dark, #1A4D3A);
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.nav-item.active {
+  background: #FFFFFF;
+  box-shadow: 4px 4px 10px rgba(26,77,58,0.06);
+}
+
+/* Custom Claymorphism Classes & Tactile Utilities */
+.bg-cream {
+  background-color: #F5F2ED;
+}
+.bg-surface-clay {
+  background-color: #FAF8F5;
+}
+.text-moss-dark {
+  color: #1A4D3A;
+}
+.bg-moss-dark {
+  background-color: #1A4D3A;
+}
+.border-moss-dark {
+  border-color: #1A4D3A;
+}
+.bg-leaf-medium {
+  background-color: #357A59;
+}
+.text-leaf-medium {
+  color: #357A59;
+}
+.bg-lime-fresh {
+  background-color: #6DB677;
+}
+.text-lime-fresh {
+  color: #6DB677;
+}
+
+/* Gradients */
+.bg-gradient-earth {
+  background: linear-gradient(135deg, #357A59 0%, #6DB677 100%);
+}
+.bg-gradient-clay {
+  background: linear-gradient(145deg, #FAF8F5 0%, #EDE8E0 100%);
+}
+.bg-gradient-moss {
+  background: linear-gradient(135deg, #1A4D3A 0%, #2D6B50 100%);
+}
+.bg-gradient-sun {
+  background: linear-gradient(135deg, #FF9E20 0%, #FFAE42 100%);
+}
+
+/* Clay Elevation Shadows */
+.shadow-clay-card {
+  box-shadow: 12px 16px 28px -4px rgba(26,77,58,0.08), -6px -6px 16px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.8), inset -2px -2px 4px rgba(26,77,58,0.04);
+}
+
+.shadow-clay-button {
+  box-shadow: 6px 8px 16px rgba(26,77,58,0.12), -4px -4px 10px rgba(255,255,255,0.9), inset 1px 1px 3px rgba(255,255,255,0.7), inset -2px -2px 4px rgba(26,77,58,0.08);
+}
+
+.shadow-clay-inset {
+  box-shadow: inset 3px 3px 6px rgba(26,77,58,0.08), inset -3px -3px 6px rgba(255,255,255,0.8);
+}
+
+.shadow-clay-pressed {
+  box-shadow: inset 4px 4px 8px rgba(26,77,58,0.14), inset -2px -2px 6px rgba(255,255,255,0.6);
+}
+
+.shadow-clay-sm {
+  box-shadow: 4px 6px 14px -2px rgba(26,77,58,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.8);
+}
+
+.shadow-clay-pill {
+  box-shadow: 4px 6px 12px rgba(26,77,58,0.08), -3px -3px 8px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.8), inset -1px -1px 2px rgba(26,77,58,0.04);
+}
+
+.shadow-clay-green {
+  box-shadow: 6px 10px 20px rgba(53,122,89,0.25), -4px -4px 10px rgba(255,255,255,0.4), inset 2px 2px 4px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(26,77,58,0.2);
+}
+
+.shadow-clay-orange {
+  box-shadow: 6px 10px 20px rgba(255,158,32,0.25), -4px -4px 10px rgba(255,255,255,0.4), inset 2px 2px 4px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(180,90,0,0.2);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F5F2ED;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5CD;
+  border-radius: 9999px;
+  border: 2px solid #F5F2ED;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9DB4A5;
+}
+
