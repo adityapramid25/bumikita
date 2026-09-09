@@ -55,13 +55,13 @@ export default function UserProfileDashboardPage() {
                 Anda perlu masuk ke akun BumiKita untuk memperbarui alamat pengiriman Indonesia, alias publik, dan memantau koin daun Anda.
               </p>
             </div>
-            <button
-              onClick={() => openAuthModal('login')}
+            <Link
+              href="/auth"
               className="w-full clay-button py-3 px-6 text-xs sm:text-sm font-extrabold shadow-clay-green flex items-center justify-center gap-2 cursor-pointer"
             >
               <LogIn className="w-4 h-4" />
               <span>Buka Layar Masuk / Daftar</span>
-            </button>
+            </Link>
           </div>
         ) : (
           /* Profile & Address Component */

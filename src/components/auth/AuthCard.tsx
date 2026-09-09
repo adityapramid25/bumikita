@@ -56,7 +56,19 @@ const ROLE_OPTIONS: Array<{
   },
 ];
 
-export default function AuthCard({ defaultMode = 'login' }: { defaultMode?: AuthMode }) {
+export interface AuthCardProps {
+  defaultMode?: AuthMode;
+  isModal?: boolean;
+  onClose?: () => void;
+  onSuccess?: () => void;
+}
+
+export default function AuthCard({
+  defaultMode = 'login',
+  isModal = false,
+  onClose,
+  onSuccess,
+}: AuthCardProps) {
   const router = useRouter();
   const { user, profile, signIn, signUp, signOut, isConfigured } = useAuth();
   const [mode, setMode] = useState<AuthMode>(defaultMode);
@@ -123,13 +135,24 @@ export default function AuthCard({ defaultMode = 'login' }: { defaultMode?: Auth
           </div>
 
           <div className="space-y-2.5 pt-2">
-            <Link
-              href="/"
-              className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-full bg-[#FAF8F5] border border-white text-xs font-extrabold text-[#1A4D3A] shadow-clay-card hover:scale-105 active:scale-95 transition-all"
-            >
-              <ArrowLeft className="w-4 h-4 text-[#357A59]" />
-              <span>Kembali ke Beranda</span>
-            </Link>
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-full bg-[#FAF8F5] border border-white text-xs font-extrabold text-[#1A4D3A] shadow-clay-card hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4 text-[#357A59]" />
+                <span>Tutup Jendela</span>
+              </button>
+            ) : (
+              <Link
+                href="/"
+                className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-full bg-[#FAF8F5] border border-white text-xs font-extrabold text-[#1A4D3A] shadow-clay-card hover:scale-105 active:scale-95 transition-all"
+              >
+                <ArrowLeft className="w-4 h-4 text-[#357A59]" />
+                <span>Kembali ke Beranda</span>
+              </Link>
+            )}
 
             <Link
               href="/profile"
@@ -168,10 +191,16 @@ export default function AuthCard({ defaultMode = 'login' }: { defaultMode?: Auth
     setIsSubmitting(false);
 
     if (res.success) {
-      setSubmitSuccess(`Selamat datang kembali! Mengalihkan ke beranda...`);
-      setTimeout(() => {
-        router.push('/');
-      }, 700);
+      setSubmitSuccess(`Selamat datang kembali! ${onSuccess ? 'Berhasil masuk.' : 'Mengalihkan ke beranda...'}`);
+      if (onSuccess) {
+        setTimeout(() => {
+          onSuccess();
+        }, 500);
+      } else {
+        setTimeout(() => {
+          router.push('/');
+        }, 700);
+      }
     } else {
       setErrorMessage(res.error || 'Email atau kata sandi Anda salah.');
     }
@@ -214,11 +243,17 @@ export default function AuthCard({ defaultMode = 'login' }: { defaultMode?: Auth
 
     if (res.success) {
       setSubmitSuccess(
-        `Akun berhasil dibuat! Bonus sambutan +100 Daun Points telah ditambahkan untuk ${regName.trim()}. Mengalihkan...`
+        `Akun berhasil dibuat! Bonus sambutan +100 Daun Points telah ditambahkan untuk ${regName.trim()}. ${onSuccess ? '' : 'Mengalihkan...'}`
       );
-      setTimeout(() => {
-        router.push('/');
-      }, 900);
+      if (onSuccess) {
+        setTimeout(() => {
+          onSuccess();
+        }, 600);
+      } else {
+        setTimeout(() => {
+          router.push('/');
+        }, 900);
+      }
     } else {
       setErrorMessage(res.error || 'Gagal mendaftar akun ke Supabase.');
     }
@@ -228,10 +263,16 @@ export default function AuthCard({ defaultMode = 'login' }: { defaultMode?: Auth
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
-      setSubmitSuccess('Berhasil terhubung dengan Akun Google! Mengalihkan...');
-      setTimeout(() => {
-        router.push('/');
-      }, 700);
+      setSubmitSuccess(`Berhasil terhubung dengan Akun Google! ${onSuccess ? '' : 'Mengalihkan...'}`);
+      if (onSuccess) {
+        setTimeout(() => {
+          onSuccess();
+        }, 400);
+      } else {
+        setTimeout(() => {
+          router.push('/');
+        }, 700);
+      }
     }, 600);
   };
 
