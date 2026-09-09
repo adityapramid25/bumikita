@@ -50,7 +50,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const openAuthModal = useCallback((mode: 'login' | 'register' = 'login') => {
     setAuthModalMode(mode);
-    setIsAuthModalOpen(true);
+    if (typeof window !== 'undefined') {
+      window.location.href = `/auth?mode=${mode}`;
+    } else {
+      setIsAuthModalOpen(true);
+    }
   }, []);
 
   const closeAuthModal = useCallback(() => {

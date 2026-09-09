@@ -9,6 +9,14 @@ import { ArrowLeft, X, ShieldCheck, Leaf } from 'lucide-react';
 export default function AuthModal() {
   const { isAuthModalOpen, authModalMode, closeAuthModal } = useAuth();
 
+  // Automatically redirect to /auth page instead of showing modal
+  useEffect(() => {
+    if (isAuthModalOpen && typeof window !== 'undefined') {
+      closeAuthModal();
+      window.location.href = `/auth?mode=${authModalMode}`;
+    }
+  }, [isAuthModalOpen, authModalMode, closeAuthModal]);
+
   // Prevent background body scroll while the full-screen takeover modal is active
   useEffect(() => {
     if (isAuthModalOpen) {
@@ -81,9 +89,6 @@ export default function AuthModal() {
           <main className="flex-1 flex items-center justify-center my-auto z-10 py-4">
             <AuthCard
               defaultMode={authModalMode}
-              isModal={true}
-              onClose={closeAuthModal}
-              onSuccess={closeAuthModal}
             />
           </main>
 
