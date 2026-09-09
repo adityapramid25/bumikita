@@ -168,6 +168,104 @@ export default function WasteToWorthScanner() {
   const streamRef = useRef<MediaStream | null>(null);
   const [isShutterFlashing, setIsShutterFlashing] = useState(false);
 
+  // Exact Rendered Image Intrinsic Geometry Tracking
+  const auditContainerRef = useRef<HTMLDivElement>(null);
+  const auditImageRef = useRef<HTMLImageElement>(null);
+  const [imageBounds, setImageBounds] = useState<{
+    offsetX: number;
+    offsetY: number;
+    renderedWidth: number;
+    renderedHeight: number;
+  }>({
+    offsetX: 0,
+    offsetY: 0,
+    renderedWidth: 0,
+    renderedHeight: 0,
+  });
+
+  // Calculate precise rendered dimensions and offsets accounting for object-contain letterboxing/pillarboxing
+  const updateImageBounds = useCallback(() => {
+    const img = auditImageRef.current;
+    const container = auditContainerRef.current;
+    if (!img || !container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+
+    const nWidth = img.naturalWidth;
+    const nHeight = img.naturalHeight;
+
+    if (!nWidth || !nHeight || imgRect.width === 0 || imgRect.height === 0) {
+      return;
+    }
+
+    const elemWidth = imgRect.width;
+    const elemHeight = imgRect.height;
+    const elemRatio = elemWidth / elemHeight;
+    const intrinsicRatio = nWidth / nHeight;
+
+    let renderedWidth = elemWidth;
+    let renderedHeight = elemHeight;
+    let innerOffsetX = 0;
+    let innerOffsetY = 0;
+
+    // Calculate letterbox/pillarbox created by object-contain inside the rendered img element
+    if (intrinsicRatio > elemRatio) {
+      // Image is wider than element box: constrained by width, letterboxed vertically
+      renderedWidth = elemWidth;
+      renderedHeight = elemWidth / intrinsicRatio;
+      innerOffsetX = 0;
+      innerOffsetY = (elemHeight - renderedHeight) / 2;
+    } else {
+      // Image is taller than element box: constrained by height, pillarboxed horizontally
+      renderedHeight = elemHeight;
+      renderedWidth = elemHeight * intrinsicRatio;
+      innerOffsetX = (elemWidth - renderedWidth) / 2;
+      innerOffsetY = 0;
+    }
+
+    // Offset relative to the container div
+    const totalOffsetX = (imgRect.left - containerRect.left) + innerOffsetX;
+    const totalOffsetY = (imgRect.top - containerRect.top) + innerOffsetY;
+
+    setImageBounds({
+      offsetX: Math.max(0, Math.round(totalOffsetX)),
+      offsetY: Math.max(0, Math.round(totalOffsetY)),
+      renderedWidth: Math.round(renderedWidth),
+      renderedHeight: Math.round(renderedHeight),
+    });
+  }, []);
+
+  // Recalculate bounds on image changes or analysis result
+  useEffect(() => {
+    if (selectedImage && analysisResult) {
+      const timer = setTimeout(() => {
+        updateImageBounds();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedImage, analysisResult, updateImageBounds]);
+
+  // Handle dynamic resizing & orientation changes with ResizeObserver
+  useEffect(() => {
+    const container = auditContainerRef.current;
+    const img = auditImageRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(() => {
+      updateImageBounds();
+    });
+
+    observer.observe(container);
+    if (img) observer.observe(img);
+
+    window.addEventListener('resize', updateImageBounds);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateImageBounds);
+    };
+  }, [updateImageBounds, selectedImage, analysisResult]);
+
   // Clean up camera stream
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -986,41 +1084,65 @@ export default function WasteToWorthScanner() {
               <div className="lg:col-span-5 flex justify-center items-start">
                 <div className="w-full rounded-2xl overflow-hidden bg-[#1D2128] shadow-clay-card border-2 border-white p-2 sm:p-3">
                   {selectedImage && (
-                    <div className="relative w-full rounded-xl overflow-hidden select-none leading-none">
+                    <div 
+                      ref={auditContainerRef}
+                      className="relative w-full rounded-xl overflow-hidden select-none leading-none flex items-center justify-center min-h-[220px]"
+                    >
                       <img 
+                        ref={auditImageRef}
                         src={selectedImage} 
                         alt={analysisResult.detectedObject.label || 'Identified Object'} 
-                        className="w-full h-auto object-contain block rounded-xl shadow-md"
+                        onLoad={updateImageBounds}
+                        className="w-full h-auto max-h-[520px] object-contain block mx-auto rounded-xl shadow-md"
                       />
 
                       {/* Tactile Glowing Bounding Box Overlay strictly mapped to image intrinsic aspect ratio */}
                       {isOverlayVisible && (
-                        <motion.div 
-                          initial={{ scale: 0.95, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          className="absolute pointer-events-none transition-all duration-300 z-10"
-                          style={{
-                            top,
-                            left,
-                            height,
-                            width,
-                          }}
+                        <div
+                          className="absolute pointer-events-none z-10"
+                          style={
+                            imageBounds.renderedWidth > 0 && imageBounds.renderedHeight > 0
+                              ? {
+                                  top: `${imageBounds.offsetY}px`,
+                                  left: `${imageBounds.offsetX}px`,
+                                  width: `${imageBounds.renderedWidth}px`,
+                                  height: `${imageBounds.renderedHeight}px`,
+                                }
+                              : {
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                }
+                          }
                         >
-                          {/* Green glowing border with corner reticles */}
-                          <div className="w-full h-full border-2 sm:border-3 border-[#6DB677] rounded-lg bg-[#6DB677]/20 shadow-[0_0_20px_rgba(109,182,119,0.6)] relative">
-                            {/* Target Reticle Corners */}
-                            <div className="absolute -top-1 -left-1 w-3.5 h-3.5 border-t-2 border-l-2 border-white" />
-                            <div className="absolute -top-1 -right-1 w-3.5 h-3.5 border-t-2 border-r-2 border-white" />
-                            <div className="absolute -bottom-1 -left-1 w-3.5 h-3.5 border-b-2 border-l-2 border-white" />
-                            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 border-b-2 border-r-2 border-white" />
+                          <motion.div 
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="absolute pointer-events-none transition-all duration-300 z-10"
+                            style={{
+                              top,
+                              left,
+                              height,
+                              width,
+                            }}
+                          >
+                            {/* Green glowing border with corner reticles */}
+                            <div className="w-full h-full border-2 sm:border-3 border-[#6DB677] rounded-lg bg-[#6DB677]/20 shadow-[0_0_20px_rgba(109,182,119,0.6)] relative">
+                              {/* Target Reticle Corners */}
+                              <div className="absolute -top-1 -left-1 w-3.5 h-3.5 border-t-2 border-l-2 border-white" />
+                              <div className="absolute -top-1 -right-1 w-3.5 h-3.5 border-t-2 border-r-2 border-white" />
+                              <div className="absolute -bottom-1 -left-1 w-3.5 h-3.5 border-b-2 border-l-2 border-white" />
+                              <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 border-b-2 border-r-2 border-white" />
 
-                            {/* Top Identification Badge Pin */}
-                            <div className="absolute -top-7 left-0 bg-[#357A59] text-white text-[10px] sm:text-[11px] font-bold px-2.5 py-0.5 rounded-lg shadow-md flex items-center gap-1.5 whitespace-nowrap z-20">
-                              <span className="w-2 h-2 rounded-full bg-[#6DB677] animate-ping" />
-                              <span>{analysisResult.detectedObject.label}</span>
+                              {/* Top Identification Badge Pin */}
+                              <div className="absolute -top-7 left-0 bg-[#357A59] text-white text-[10px] sm:text-[11px] font-bold px-2.5 py-0.5 rounded-lg shadow-md flex items-center gap-1.5 whitespace-nowrap z-20">
+                                <span className="w-2 h-2 rounded-full bg-[#6DB677] animate-ping" />
+                                <span>{analysisResult.detectedObject.label}</span>
+                              </div>
                             </div>
-                          </div>
-                        </motion.div>
+                          </motion.div>
+                        </div>
                       )}
                     </div>
                   )}
