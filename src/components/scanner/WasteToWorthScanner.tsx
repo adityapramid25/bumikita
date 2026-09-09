@@ -44,6 +44,12 @@ const SUGGESTION_CHIPS = [
 
 const SAMPLE_DEMO_ITEMS = [
   {
+    name: 'Buku / Novel Bekas di Meja',
+    icon: '📚',
+    image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Upcycle buku novel bekas jadi hiasan dinding estetik, floating shelf, atau secret box organizer'
+  },
+  {
     name: 'Botol Plastik Aqua 600ml',
     icon: '🧴',
     image: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800&auto=format&fit=crop&q=80',
@@ -54,16 +60,10 @@ const SAMPLE_DEMO_ITEMS = [
     icon: '📦',
     image: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=800&auto=format&fit=crop&q=80',
     prompt: 'Ubah jadi organizer meja bertingkat dengan slot charger HP'
-  },
-  {
-    name: 'Celana Jeans Denim Rusak',
-    icon: '👖',
-    image: 'https://images.unsplash.com/photo-1542272604-780c96856592?w=800&auto=format&fit=crop&q=80',
-    prompt: 'Upcycle jadi tas selempang gadget atau laptop sleeve tanpa mesin jahit'
   }
 ];
 
-// Helper: Resize and optimize image to max 1024x1024 WebP to preserve sharp edges and optimize latency
+// Helper: Resize and optimize image to max 1024x1024 JPEG to preserve sharp edges and optimize vision model transmission
 async function preprocessImage(dataUrlOrBlob: string | Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -94,17 +94,24 @@ async function preprocessImage(dataUrlOrBlob: string | Blob): Promise<string> {
       ctx.drawImage(img, 0, 0, width, height);
 
       try {
-        const webp = canvas.toDataURL('image/webp', 0.88);
-        if (webp.startsWith('data:image/webp')) {
-          resolve(webp);
-          return;
+        resolve(canvas.toDataURL('image/jpeg', 0.90));
+      } catch (canvasErr) {
+        console.warn('Canvas export failed, falling back:', canvasErr);
+        if (typeof dataUrlOrBlob === 'string') {
+          resolve(dataUrlOrBlob);
+        } else {
+          reject(canvasErr);
         }
-      } catch (e) {
-        console.warn('WebP conversion fallback to jpeg:', e);
       }
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
     };
-    img.onerror = (err) => reject(err);
+    img.onerror = (err) => {
+      console.warn('Image load failed, falling back to string:', err);
+      if (typeof dataUrlOrBlob === 'string') {
+        resolve(dataUrlOrBlob);
+      } else {
+        reject(err);
+      }
+    };
 
     if (typeof dataUrlOrBlob === 'string') {
       img.src = dataUrlOrBlob;
@@ -313,13 +320,34 @@ export default function WasteToWorthScanner() {
     }, 1800);
 
     try {
+      // Normalize and extract clean base64 payload
+      let base64Payload = selectedImage;
+      if (selectedImage.startsWith('http://') || selectedImage.startsWith('https://')) {
+        try {
+          const resp = await fetch(selectedImage);
+          const blob = await resp.blob();
+          base64Payload = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (fetchErr) {
+          console.error('Failed to convert remote image to data URL:', fetchErr);
+        }
+      }
+
+      const cleanBase64 = base64Payload.replace(/^data:image\/\w+;base64,/, '').trim();
+      const mimeMatch = base64Payload.match(/^data:(image\/\w+);base64,/);
+      const detectedMime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+
       const response = await fetch('/api/gemini/upcycle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: userPrompt,
-          imageBase64: selectedImage,
-          mimeType: selectedImage.startsWith('data:image/webp') ? 'image/webp' : 'image/jpeg',
+          imageBase64: cleanBase64,
+          mimeType: detectedMime,
         }),
       });
 
@@ -327,7 +355,7 @@ export default function WasteToWorthScanner() {
       clearTimeout(timer1);
       clearTimeout(timer2);
 
-      if (!response.ok || !json.data) {
+      if (!response.ok || json.error || !json.data) {
         throw new Error(json.error || 'Gagal memproses analisis gambar sampah');
       }
 
@@ -478,12 +506,17 @@ export default function WasteToWorthScanner() {
     }, 1200);
   };
 
-  // Normalized Bounding Box [ymin, xmin, ymax, xmax] in 0-1000 scale
-  const box2d = analysisResult?.detectedObject?.box2d || [180, 240, 840, 760];
-  const boxTop = (box2d[0] / 1000) * 100;
-  const boxLeft = (box2d[1] / 1000) * 100;
-  const boxHeight = ((box2d[2] - box2d[0]) / 1000) * 100;
-  const boxWidth = ((box2d[3] - box2d[1]) / 1000) * 100;
+  // Clamped Normalized Bounding Box [ymin, xmin, ymax, xmax] in 0-1000 scale
+  const rawBox = analysisResult?.detectedObject?.box2d || [150, 150, 850, 850];
+  const ymin = Math.max(0, Math.min(1000, Number(rawBox[0]) || 0));
+  const xmin = Math.max(0, Math.min(1000, Number(rawBox[1]) || 0));
+  const ymax = Math.max(ymin + 10, Math.min(1000, Number(rawBox[2]) || 1000));
+  const xmax = Math.max(xmin + 10, Math.min(1000, Number(rawBox[3]) || 1000));
+
+  const boxTop = (ymin / 1000) * 100;
+  const boxLeft = (xmin / 1000) * 100;
+  const boxHeight = ((ymax - ymin) / 1000) * 100;
+  const boxWidth = ((xmax - xmin) / 1000) * 100;
 
   return (
     <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-4 space-y-6">
@@ -505,7 +538,7 @@ export default function WasteToWorthScanner() {
               AI Multimodal Camera Vision
             </span>
             <span className="text-xs font-semibold text-[#1A4D3A]/60 hidden sm:inline">
-              Powered by gemini-3.8-flash
+              Powered by gemini-2.5-flash Vision
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1A4D3A]">
@@ -838,44 +871,46 @@ export default function WasteToWorthScanner() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
               {/* Image with Visual Verification Bounding Box Overlay (5 Cols) */}
-              <div className="lg:col-span-5">
-                <div className="relative w-full aspect-square sm:aspect-[4/3] rounded-2xl overflow-hidden bg-[#1D2128] shadow-clay-card border-2 border-white group">
+              <div className="lg:col-span-5 flex justify-center">
+                <div className="w-full rounded-2xl overflow-hidden bg-[#1D2128] shadow-clay-card border-2 border-white flex items-center justify-center p-2 sm:p-3 min-h-[300px]">
                   {selectedImage && (
-                    <img 
-                      src={selectedImage} 
-                      alt="Identified Object" 
-                      className="w-full h-full object-contain"
-                    />
-                  )}
+                    <div className="relative inline-block max-w-full leading-none select-none">
+                      <img 
+                        src={selectedImage} 
+                        alt="Identified Object" 
+                        className="w-auto h-auto max-w-full max-h-[460px] object-contain rounded-xl block mx-auto shadow-md"
+                      />
 
-                  {/* Tactile Glowing Bounding Box Overlay */}
-                  {isOverlayVisible && (
-                    <motion.div 
-                      initial={{ scale: 0.95, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="absolute pointer-events-none transition-all duration-300"
-                      style={{
-                        top: `${boxTop}%`,
-                        left: `${boxLeft}%`,
-                        height: `${boxHeight}%`,
-                        width: `${boxWidth}%`,
-                      }}
-                    >
-                      {/* Green glowing border with corner reticles */}
-                      <div className="w-full h-full border-2 sm:border-3 border-[#6DB677] rounded-xl bg-[#6DB677]/15 shadow-[0_0_20px_rgba(109,182,119,0.5)] relative">
-                        {/* Target Reticle Corners */}
-                        <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-white" />
-                        <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-white" />
-                        <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-white" />
-                        <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-white" />
+                      {/* Tactile Glowing Bounding Box Overlay strictly mapped to image aspect ratio */}
+                      {isOverlayVisible && (
+                        <motion.div 
+                          initial={{ scale: 0.95, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="absolute pointer-events-none transition-all duration-300 z-10"
+                          style={{
+                            top: `${boxTop}%`,
+                            left: `${boxLeft}%`,
+                            height: `${boxHeight}%`,
+                            width: `${boxWidth}%`,
+                          }}
+                        >
+                          {/* Green glowing border with corner reticles */}
+                          <div className="w-full h-full border-2 sm:border-3 border-[#6DB677] rounded-lg bg-[#6DB677]/20 shadow-[0_0_20px_rgba(109,182,119,0.6)] relative">
+                            {/* Target Reticle Corners */}
+                            <div className="absolute -top-1 -left-1 w-3.5 h-3.5 border-t-2 border-l-2 border-white" />
+                            <div className="absolute -top-1 -right-1 w-3.5 h-3.5 border-t-2 border-r-2 border-white" />
+                            <div className="absolute -bottom-1 -left-1 w-3.5 h-3.5 border-b-2 border-l-2 border-white" />
+                            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 border-b-2 border-r-2 border-white" />
 
-                        {/* Top Identification Badge Pin */}
-                        <div className="absolute -top-7 left-0 bg-[#357A59] text-white text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-lg shadow-md flex items-center gap-1 whitespace-nowrap">
-                          <span className="w-2 h-2 rounded-full bg-[#6DB677] animate-ping" />
-                          <span>{analysisResult.detectedObject.label}</span>
-                        </div>
-                      </div>
-                    </motion.div>
+                            {/* Top Identification Badge Pin */}
+                            <div className="absolute -top-7 left-0 bg-[#357A59] text-white text-[10px] sm:text-[11px] font-bold px-2.5 py-0.5 rounded-lg shadow-md flex items-center gap-1.5 whitespace-nowrap z-20">
+                              <span className="w-2 h-2 rounded-full bg-[#6DB677] animate-ping" />
+                              <span>{analysisResult.detectedObject.label}</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
