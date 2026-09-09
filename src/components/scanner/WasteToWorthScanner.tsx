@@ -30,7 +30,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Layers,
-  HelpCircle
+  HelpCircle,
+  Crop
 } from 'lucide-react';
 
 const SUGGESTION_CHIPS = [
@@ -135,6 +136,7 @@ export default function WasteToWorthScanner() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraConnecting, setIsCameraConnecting] = useState(false);
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<'1:1' | '9:16' | '4:3'>('1:1');
 
   // Analysis Result States
   const [analysisResult, setAnalysisResult] = useState<WasteAnalysisResult | null>(null);
@@ -256,19 +258,72 @@ export default function WasteToWorthScanner() {
     if (!videoRef.current) return;
     const video = videoRef.current;
 
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = video.videoWidth || 640;
-    tempCanvas.height = video.videoHeight || 480;
-    const ctx = tempCanvas.getContext('2d');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-    const rawData = tempCanvas.toDataURL('image/jpeg', 0.9);
+    // Calculate target dimensions based on selected ratio (WYSIWYG crop)
+    let targetWidth = video.videoWidth || 640;
+    let targetHeight = video.videoHeight || 480;
+    let sourceX = 0;
+    let sourceY = 0;
 
+    if (aspectRatio === '1:1') {
+      const size = Math.min(video.videoWidth, video.videoHeight);
+      targetWidth = size;
+      targetHeight = size;
+      sourceX = (video.videoWidth - size) / 2;
+      sourceY = (video.videoHeight - size) / 2;
+    } else if (aspectRatio === '9:16') {
+      // Height priority portrait crop
+      const targetRatio = 9 / 16;
+      const currentRatio = video.videoWidth / video.videoHeight;
+      if (currentRatio > targetRatio) {
+        // Wider than 9:16 (e.g. landscape webcam), crop width symmetrically
+        targetWidth = Math.round((video.videoHeight * 9) / 16);
+        targetHeight = video.videoHeight;
+        sourceX = Math.round((video.videoWidth - targetWidth) / 2);
+        sourceY = 0;
+      } else {
+        // Taller than 9:16, crop height symmetrically
+        targetWidth = video.videoWidth;
+        targetHeight = Math.round((video.videoWidth * 16) / 9);
+        sourceX = 0;
+        sourceY = Math.round((video.videoHeight - targetHeight) / 2);
+      }
+    } else if (aspectRatio === '4:3') {
+      const targetRatio = 4 / 3;
+      const currentRatio = video.videoWidth / video.videoHeight;
+      if (currentRatio > targetRatio) {
+        // Wider than 4:3, crop width symmetrically
+        targetWidth = Math.round((video.videoHeight * 4) / 3);
+        targetHeight = video.videoHeight;
+        sourceX = Math.round((video.videoWidth - targetWidth) / 2);
+        sourceY = 0;
+      } else {
+        // Taller than 4:3 (e.g. portrait camera), crop height symmetrically
+        targetWidth = video.videoWidth;
+        targetHeight = Math.round((video.videoWidth * 3) / 4);
+        sourceX = 0;
+        sourceY = Math.round((video.videoHeight - targetHeight) / 2);
+      }
+    }
+
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    // Draw ONLY the cropped frame that matches the on-screen preview
+    ctx.drawImage(
+      video,
+      sourceX, sourceY, targetWidth, targetHeight,
+      0, 0, targetWidth, targetHeight
+    );
+
+    const croppedBase64 = canvas.toDataURL('image/jpeg', 0.90);
     stopCamera();
 
-    // Optimize to max 1024x1024 WebP
-    const optimized = await preprocessImage(rawData);
+    // Optimize to max 1024x1024
+    const optimized = await preprocessImage(croppedBase64);
     setSelectedImage(optimized);
   };
 
@@ -576,8 +631,41 @@ export default function WasteToWorthScanner() {
       {stage === 'capture' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left / Top Viewfinder Area (7 Cols) */}
-          <div className="lg:col-span-7 space-y-4">
-            <div className="relative w-full aspect-[4/3] bg-[#EAE5DC] rounded-3xl overflow-hidden shadow-clay-card border-2 border-white/80 flex items-center justify-center">
+          <div className="lg:col-span-7 space-y-3">
+            {/* Tactile Clay Aspect Ratio Switcher */}
+            <div className="flex items-center justify-between gap-2 px-1">
+              <span className="text-xs font-bold text-[#1A4D3A]/70 flex items-center gap-1.5">
+                <Crop className="w-3.5 h-3.5 text-[#357A59]" />
+                Rasio Bidik Kamera:
+              </span>
+              <div className="inline-flex items-center p-1 rounded-2xl bg-[#FAF8F5] border border-white shadow-clay-sm gap-1">
+                {(['1:1', '9:16', '4:3'] as const).map((ratio) => {
+                  const isActive = aspectRatio === ratio;
+                  const label = ratio === '1:1' ? '1:1 Persegi' : ratio === '9:16' ? '9:16 Portrait' : '4:3 Lanskap';
+                  return (
+                    <button
+                      key={ratio}
+                      type="button"
+                      onClick={() => setAspectRatio(ratio)}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-[#357A59] text-white shadow-sm'
+                          : 'text-[#1A4D3A]/70 hover:text-[#1A4D3A] hover:bg-[#EAE5DC]/50'
+                      }`}
+                      title={`Ubah rasio ke ${label}`}
+                    >
+                      {ratio}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className={`relative w-full ${
+              aspectRatio === '1:1' ? 'aspect-square' :
+              aspectRatio === '9:16' ? 'aspect-[9/16] max-h-[520px] mx-auto' :
+              'aspect-[4/3]'
+            } bg-[#EAE5DC] rounded-3xl overflow-hidden shadow-clay-card border-2 border-white/80 flex items-center justify-center transition-all duration-300`}>
               {/* State A: Live Camera Active */}
               {isCameraActive && (
                 <div className="relative w-full h-full">
