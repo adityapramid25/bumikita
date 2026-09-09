@@ -44,22 +44,22 @@ const SUGGESTION_CHIPS = [
 
 const SAMPLE_DEMO_ITEMS = [
   {
-    name: 'Buku / Novel Bekas di Meja',
+    name: 'Celana Jeans Denim',
+    icon: '👖',
+    image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Upcycle celana jeans bekas jadi tote bag vintage atau organizer dinding bertingkat'
+  },
+  {
+    name: 'Buku / Novel Bekas',
     icon: '📚',
     image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80',
     prompt: 'Upcycle buku novel bekas jadi hiasan dinding estetik, floating shelf, atau secret box organizer'
   },
   {
-    name: 'Botol Plastik Aqua 600ml',
+    name: 'Wadah & Plastik Daur Ulang',
     icon: '🧴',
-    image: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800&auto=format&fit=crop&q=80',
-    prompt: 'Bikin pot tanaman self-watering atau wadah pensil estetik untuk meja belajar'
-  },
-  {
-    name: 'Kardus Sepatu / Paket',
-    icon: '📦',
-    image: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=800&auto=format&fit=crop&q=80',
-    prompt: 'Ubah jadi organizer meja bertingkat dengan slot charger HP'
+    image: 'https://images.unsplash.com/photo-1605600659908-0ef719419d41?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Bikin pot tanaman self-watering atau wadah alat tulis estetik untuk meja belajar'
   }
 ];
 
@@ -320,34 +320,14 @@ export default function WasteToWorthScanner() {
     }, 1800);
 
     try {
-      // Normalize and extract clean base64 payload
-      let base64Payload = selectedImage;
-      if (selectedImage.startsWith('http://') || selectedImage.startsWith('https://')) {
-        try {
-          const resp = await fetch(selectedImage);
-          const blob = await resp.blob();
-          base64Payload = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-        } catch (fetchErr) {
-          console.error('Failed to convert remote image to data URL:', fetchErr);
-        }
-      }
-
-      const cleanBase64 = base64Payload.replace(/^data:image\/\w+;base64,/, '').trim();
-      const mimeMatch = base64Payload.match(/^data:(image\/\w+);base64,/);
-      const detectedMime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-
+      // Pass selected image directly - backend seamlessly handles both base64 and remote URLs with zero CORS
       const response = await fetch('/api/gemini/upcycle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: userPrompt,
-          imageBase64: cleanBase64,
-          mimeType: detectedMime,
+          imageBase64: selectedImage,
+          mimeType: selectedImage.startsWith('data:image/png') ? 'image/png' : 'image/jpeg',
         }),
       });
 
@@ -357,14 +337,6 @@ export default function WasteToWorthScanner() {
 
       if (!response.ok || json.error || !json.data) {
         throw new Error(json.error || 'Gagal memproses analisis gambar sampah');
-      }
-
-      if (json.isDetected === false || json.data?.isDetected === false) {
-        throw new Error(
-          json.userFriendlyMessage ||
-          json.data?.userFriendlyMessage ||
-          'Foto kurang jelas atau tidak terdeteksi objek sampah yang spesifik. Posisikan objek di tengah dengan pencahayaan yang cukup.'
-        );
       }
 
       const resData: WasteAnalysisResult = json.data;
@@ -380,7 +352,7 @@ export default function WasteToWorthScanner() {
       // Short delay for smooth transition
       setTimeout(() => {
         setStage('results');
-      }, 400);
+      }, 300);
 
     } catch (err: any) {
       clearTimeout(timer1);
