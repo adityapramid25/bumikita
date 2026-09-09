@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { WasteAnalysisResult } from '@/src/types';
 
-// Models on OpenRouter
-const PRIMARY_MODEL = 'qwen/qwen-2.5-vl-72b-instruct:free';
-const FALLBACK_MODEL = 'qwen/qwen-2.5-vl-7b-instruct:free';
+// Candidate vision models evaluated sequentially in resilient fallback loop
+const VISION_MODELS = [
+  'qwen/qwen-2.5-vl-72b-instruct:free',
+  'openrouter/free'
+];
 
 // Lazy initialization of OpenRouter client
 function getOpenRouterClient() {
@@ -57,16 +59,12 @@ Schema:
   ]
 }`;
 
-// Helper: robust JSON extraction
+// Helper: robust JSON extraction with markdown stripping
 function extractJsonFromText(rawText: string): any {
   let cleaned = (rawText || '').trim();
 
-  // Strip standard markdown fences if present
-  cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-
-  if (cleaned.includes('```')) {
-    cleaned = cleaned.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-  }
+  // Strip standard markdown code blocks
+  cleaned = cleaned.replace(/```json/gi, '').replace(/```/g, '').trim();
 
   try {
     return JSON.parse(cleaned);
@@ -84,33 +82,31 @@ function extractJsonFromText(rawText: string): any {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { prompt = '', imageBase64 = '', mimeType = 'image/jpeg' } = body;
+    const { prompt = '', imageBase64 = '', image = '' } = body;
 
-    // Validate clean base64 data
-    const base64Clean = (imageBase64 || '').replace(/^data:image\/\w+;base64,/, '').trim();
-    if (!base64Clean) {
+    const rawImage = (imageBase64 || image || '').trim();
+    if (!rawImage) {
       return NextResponse.json(
-        { error: 'Gagal mendeteksi gambar: Data gambar tidak ditemukan atau payload base64 kosong.' },
+        { error: 'Foto tidak ditemukan. Silakan ambil atau unggah foto objek sampah terlebih dahulu.' },
         { status: 400 }
       );
     }
+
+    // Ensure image payload is properly formatted as a Base64 data URI
+    const formattedImageUrl = rawImage.startsWith('data:')
+      ? rawImage
+      : `data:image/jpeg;base64,${rawImage}`;
 
     const openRouterClient = getOpenRouterClient();
     if (!openRouterClient) {
       return NextResponse.json(
         {
           error:
-            'Gagal mendeteksi gambar: OPENROUTER_API_KEY belum terkonfigurasi pada server. Silakan masukkan OPENROUTER_API_KEY pada Settings / Secrets agar Qwen 2.5-VL dapat memproses gambar.',
+            'OPENROUTER_API_KEY belum terkonfigurasi pada server. Silakan masukkan OPENROUTER_API_KEY pada Settings / Secrets agar AI Vision dapat memproses gambar.',
         },
         { status: 500 }
       );
     }
-
-    const validMimeType = mimeType && ['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)
-      ? mimeType
-      : 'image/jpeg';
-
-    const imageUrl = `data:${validMimeType};base64,${base64Clean}`;
 
     const userTextPrompt = prompt?.trim()
       ? `User creative intent: "${prompt.trim()}". Analyze the primary foreground waste item in this image and return the JSON audit strictly according to instructions.`
@@ -131,7 +127,7 @@ export async function POST(req: NextRequest) {
           {
             type: 'image_url',
             image_url: {
-              url: imageUrl,
+              url: formattedImageUrl,
             },
           },
         ],
@@ -139,76 +135,50 @@ export async function POST(req: NextRequest) {
     ];
 
     let completionResponse: OpenAI.Chat.Completions.ChatCompletion | null = null;
-    let activeModelUsed = PRIMARY_MODEL;
+    let activeModelUsed = '';
     let lastError: any = null;
 
-    // 1. Try Primary Model: Qwen 2.5-VL 72B
-    try {
-      completionResponse = await openRouterClient.chat.completions.create({
-        model: PRIMARY_MODEL,
-        messages,
-        temperature: 0.1,
-        max_tokens: 2200,
-      });
-      activeModelUsed = PRIMARY_MODEL;
-    } catch (primaryErr: any) {
-      lastError = primaryErr;
-      const status = primaryErr?.status || primaryErr?.statusCode;
-      console.warn(`[OpenRouter] Primary ${PRIMARY_MODEL} encountered error (${status}):`, primaryErr?.message || primaryErr);
+    // Resilient Fallback Loop over candidate vision models
+    for (const candidateModel of VISION_MODELS) {
+      try {
+        console.log(`[OpenRouter Vision] Attempting model: ${candidateModel}`);
+        const response = await openRouterClient.chat.completions.create({
+          model: candidateModel,
+          messages,
+          temperature: 0.1,
+          max_tokens: 2200,
+        });
 
-      // Check if retryable (rate limit 429, high demand 503, 502, 504)
-      const isRetryable =
-        status === 429 ||
-        status === 503 ||
-        status === 502 ||
-        status === 504 ||
-        (primaryErr?.message &&
-          (primaryErr.message.includes('rate') ||
-            primaryErr.message.includes('demand') ||
-            primaryErr.message.includes('busy') ||
-            primaryErr.message.includes('overloaded')));
-
-      if (isRetryable) {
-        try {
-          console.log(`[OpenRouter] Retrying ${PRIMARY_MODEL} after brief pause...`);
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          completionResponse = await openRouterClient.chat.completions.create({
-            model: PRIMARY_MODEL,
-            messages,
-            temperature: 0.1,
-            max_tokens: 2200,
-          });
-          activeModelUsed = PRIMARY_MODEL;
-        } catch (retryErr: any) {
-          console.warn(`[OpenRouter] Primary retry failed:`, retryErr?.message || retryErr);
-          lastError = retryErr;
+        if (
+          response &&
+          response.choices &&
+          response.choices.length > 0 &&
+          response.choices[0]?.message?.content
+        ) {
+          completionResponse = response;
+          activeModelUsed = candidateModel;
+          console.log(`[OpenRouter Vision] Success using model: ${candidateModel}`);
+          break;
         }
-      }
-
-      // 2. Fallback to Qwen 2.5-VL 7B
-      if (!completionResponse) {
-        try {
-          console.log(`[OpenRouter] Falling back to ${FALLBACK_MODEL}...`);
-          await new Promise((resolve) => setTimeout(resolve, 800));
-          completionResponse = await openRouterClient.chat.completions.create({
-            model: FALLBACK_MODEL,
-            messages,
-            temperature: 0.1,
-            max_tokens: 2200,
-          });
-          activeModelUsed = FALLBACK_MODEL;
-        } catch (fallbackErr: any) {
-          console.error(`[OpenRouter] Fallback ${FALLBACK_MODEL} failed:`, fallbackErr?.message || fallbackErr);
-          lastError = fallbackErr;
-        }
+      } catch (err: any) {
+        lastError = err;
+        const statusCode =
+          err?.status || err?.statusCode || (err?.response ? err.response.status : undefined);
+        console.warn(
+          `[OpenRouter Vision] Model ${candidateModel} failed with status ${statusCode || 'unknown'}: ${
+            err?.message || err
+          }. Attempting fallback candidate...`
+        );
+        // Continue to the next candidate model in VISION_MODELS
       }
     }
 
+    // If ALL candidate models fail, return sanitized Indonesian error message
     if (!completionResponse || !completionResponse.choices || completionResponse.choices.length === 0) {
-      const errorDetail = lastError?.message || 'Layanan Vision OpenRouter sedang mengalami antrean tinggi (503).';
+      console.error('[OpenRouter Vision] All candidate models failed. Last error:', lastError);
       return NextResponse.json(
         {
-          error: `Gagal mendeteksi gambar: ${errorDetail}. Silakan coba beberapa detik lagi.`,
+          error: 'Layanan AI Vision sedang sibuk. Silakan coba klik tombol analisis sekali lagi.',
         },
         { status: 503 }
       );
@@ -216,10 +186,26 @@ export async function POST(req: NextRequest) {
 
     const rawReply = completionResponse.choices[0]?.message?.content || '';
     if (!rawReply.trim()) {
-      throw new Error('Model Qwen 2.5-VL memberikan respons kosong.');
+      return NextResponse.json(
+        {
+          error: 'Layanan AI Vision sedang sibuk. Silakan coba klik tombol analisis sekali lagi.',
+        },
+        { status: 503 }
+      );
     }
 
-    const parsedJson = extractJsonFromText(rawReply);
+    let parsedJson: any;
+    try {
+      parsedJson = extractJsonFromText(rawReply);
+    } catch (parseErr) {
+      console.error('[OpenRouter Vision] Failed to parse model output as JSON:', rawReply, parseErr);
+      return NextResponse.json(
+        {
+          error: 'Layanan AI Vision sedang sibuk. Silakan coba klik tombol analisis sekali lagi.',
+        },
+        { status: 500 }
+      );
+    }
 
     // If validation check failed (too dark / blurry / no waste found)
     if (parsedJson.isDetected === false) {
@@ -289,7 +275,7 @@ export async function POST(req: NextRequest) {
     // Assemble final verified result
     const finalResult: WasteAnalysisResult = {
       isDetected: true,
-      userFriendlyMessage: parsedJson.userFriendlyMessage || 'Objek sampah berhasil dianalisis dengan Qwen 2.5-VL.',
+      userFriendlyMessage: parsedJson.userFriendlyMessage || 'Objek sampah berhasil dianalisis.',
       detectedObject,
       recommendations,
     };
@@ -323,11 +309,11 @@ export async function POST(req: NextRequest) {
       projectName: recommendations[0]?.title,
     });
   } catch (err: any) {
-    console.error('Error in Qwen 2.5-VL upcycle vision API:', err);
-    // Explicit error response - zero fake mock data
+    console.error('Error in upcycle vision API route handler:', err);
+    // Sanitize user-facing error message in Indonesian
     return NextResponse.json(
       {
-        error: `Gagal mendeteksi gambar: ${err?.message || 'Terjadi kesalahan saat memproses gambar dengan Qwen 2.5-VL via OpenRouter.'}`,
+        error: 'Layanan AI Vision sedang sibuk. Silakan coba klik tombol analisis sekali lagi.',
       },
       { status: 500 }
     );
