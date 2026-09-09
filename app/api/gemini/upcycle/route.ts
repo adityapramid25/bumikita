@@ -33,8 +33,7 @@ Rules:
 1. Object & Material Audit: Identify the primary object or material in the foreground (such as plastic bottle, packaging, cardboard, paper/book, denim/textile, can, glass, scrap, or household item).
 2. Material Classification: Identify the object label in Indonesian (e.g., "Botol Plastik PET", "Kardus Kemasan", "Kain Jeans Bekas", "Buku / Kertas Bekas"), its exact material category, condition, approximate dimension, and realistic scrap recycling value in IDR (harga rongsok kiloan/satuan).
 3. Creative Upcycling Recipes: Generate at least 3 realistic, creative upcycling project recommendations in Indonesian suitable for students/artisans in Indonesia. Each project must have realistic selling benchmark prices (Rp 25.000 - Rp 150.000), required materials, and clear step-by-step instructions.
-4. Bounding Box: Provide normalized coordinates [ymin, xmin, ymax, xmax] (scaled 0 to 1000) where ymin is top (0=top of image, 1000=bottom), xmin is left (0=left, 1000=right), ymax is bottom, and xmax is right. The box must tightly wrap the primary foreground waste object without enclosing empty background or floor.
-5. Detection Flag: Set "isDetected": true for any visible physical object, scrap, or material. Only set "isDetected": false if the image is completely pitch black or empty.
+4. Detection Flag: Set "isDetected": true for any visible physical object, scrap, or material. Only set "isDetected": false if the image is completely pitch black or empty.
 
 RETURN STRICTLY RAW VALID JSON ONLY. Do NOT include markdown blocks (\`\`\`json or \`\`\`).
 Schema:
@@ -46,8 +45,7 @@ Schema:
     "material": string,
     "dimension": string,
     "condition": string,
-    "estimatedScrapValue": string,
-    "box2d": [number, number, number, number]
+    "estimatedScrapValue": string
   },
   "recommendations": [
     {
@@ -95,7 +93,6 @@ function getHeuristicAnalysis(prompt: string): WasteAnalysisResult {
         dimension: 'Potongan Pakaian (~80cm)',
         condition: 'Layak Daur Ulang / Upcycle',
         estimatedScrapValue: 'Rp 4.000 - Rp 8.000 / kg',
-        box2d: [150, 150, 850, 850],
       },
       recommendations: [
         {
@@ -155,7 +152,6 @@ function getHeuristicAnalysis(prompt: string): WasteAnalysisResult {
         dimension: 'Sedang (30x20x15 cm)',
         condition: 'Kering dan Kokoh',
         estimatedScrapValue: 'Rp 2.200 - Rp 3.500 / kg',
-        box2d: [120, 140, 880, 860],
       },
       recommendations: [
         {
@@ -215,7 +211,6 @@ function getHeuristicAnalysis(prompt: string): WasteAnalysisResult {
       dimension: 'Tinggi ~22cm, Diameter ~7cm (600ml)',
       condition: 'Bersih & Layak Upcycle',
       estimatedScrapValue: 'Rp 3.500 - Rp 6.000 / kg',
-      box2d: [100, 200, 900, 800],
     },
     recommendations: [
       {
@@ -456,34 +451,7 @@ export async function POST(req: NextRequest) {
       dimension: parsedJson.detectedObject?.dimension || 'Ukuran Sedang',
       condition: parsedJson.detectedObject?.condition || 'Layak Daur Ulang',
       estimatedScrapValue: parsedJson.detectedObject?.estimatedScrapValue || 'Rp 3.000 - Rp 6.000 / kg',
-      box2d: [150, 150, 850, 850] as [number, number, number, number],
     };
-
-    if (
-      Array.isArray(parsedJson.detectedObject?.box2d) &&
-      parsedJson.detectedObject.box2d.length === 4
-    ) {
-      let nums = parsedJson.detectedObject.box2d.map((val: any) => Number(val) || 0);
-      // If model returned 0.0 - 1.0 float range instead of 0 - 1000
-      const maxVal = Math.max(...nums);
-      if (maxVal > 0 && maxVal <= 1.0) {
-        nums = nums.map((v: number) => Math.round(v * 1000));
-      } else {
-        nums = nums.map((v: number) => Math.round(v));
-      }
-
-      const rawYmin = Math.min(nums[0], nums[2]);
-      const rawYmax = Math.max(nums[0], nums[2]);
-      const rawXmin = Math.min(nums[1], nums[3]);
-      const rawXmax = Math.max(nums[1], nums[3]);
-
-      detectedObject.box2d = [
-        Math.max(0, Math.min(1000, rawYmin)),
-        Math.max(0, Math.min(1000, rawXmin)),
-        Math.max(0, Math.min(1000, Math.max(rawYmin + 15, rawYmax))),
-        Math.max(0, Math.min(1000, Math.max(rawXmin + 15, rawXmax))),
-      ] as [number, number, number, number];
-    }
 
     const recommendations = (Array.isArray(parsedJson.recommendations) && parsedJson.recommendations.length > 0
       ? parsedJson.recommendations

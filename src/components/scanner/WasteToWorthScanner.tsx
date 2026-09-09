@@ -31,7 +31,10 @@ import {
   ShieldCheck,
   Layers,
   HelpCircle,
-  Crop
+  Crop,
+  Package,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 const SUGGESTION_CHIPS = [
@@ -144,7 +147,8 @@ export default function WasteToWorthScanner() {
   // Analysis Result States
   const [analysisResult, setAnalysisResult] = useState<WasteAnalysisResult | null>(null);
   const [selectedRecId, setSelectedRecId] = useState<string | null>(null);
-  const [isOverlayVisible, setIsOverlayVisible] = useState(true);
+  const [isSmartOverlayVisible, setIsSmartOverlayVisible] = useState(true);
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [checkedMaterials, setCheckedMaterials] = useState<string[]>([]);
   const [isClaimed, setIsClaimed] = useState(false);
@@ -167,153 +171,6 @@ export default function WasteToWorthScanner() {
   const viewfinderContainerRef = useRef<HTMLDivElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isShutterFlashing, setIsShutterFlashing] = useState(false);
-
-  // Exact Rendered Image Intrinsic Geometry & Bounding Box Calculation
-  // Calculates coordinates relative to the intrinsic naturalWidth/naturalHeight of the rendered <img> element
-  // instead of offsetWidth/offsetHeight to prevent bounding box floatation due to padding, border, or letterbox bars.
-  const auditContainerRef = useRef<HTMLDivElement>(null);
-  const auditImageRef = useRef<HTMLImageElement>(null);
-  const [boxOverlayCoords, setBoxOverlayCoords] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-    isReady: boolean;
-  }>({
-    top: 0,
-    left: 0,
-    width: 0,
-    height: 0,
-    isReady: false,
-  });
-
-  // Calculate coordinates relative to intrinsic natural width/height of the rendered <img> element
-  // using naturalWidth/naturalHeight instead of offsetWidth/offsetHeight.
-  // Correctly maps 0-1000 normalized vision coordinates to the displayed image's exact dimensions, fixing floatation.
-  const updateBoundingBoxOverlay = useCallback(() => {
-    const img = auditImageRef.current;
-    const container = auditContainerRef.current;
-    if (!img || !container) return;
-
-    // Use naturalWidth and naturalHeight of the <img> element instead of offsetWidth / offsetHeight
-    const naturalWidth = img.naturalWidth;
-    const naturalHeight = img.naturalHeight;
-
-    if (!naturalWidth || !naturalHeight) {
-      return;
-    }
-
-    const containerRect = container.getBoundingClientRect();
-    const imgRect = img.getBoundingClientRect();
-
-    if (imgRect.width === 0 || imgRect.height === 0) {
-      return;
-    }
-
-    // Determine intrinsic aspect ratio and compare with element box to handle letterboxing/pillarboxing
-    const intrinsicRatio = naturalWidth / naturalHeight;
-    const elementRatio = imgRect.width / imgRect.height;
-
-    let displayedWidth = imgRect.width;
-    let displayedHeight = imgRect.height;
-    let innerOffsetX = 0;
-    let innerOffsetY = 0;
-
-    if (intrinsicRatio > elementRatio) {
-      // Letterbox: image is constrained by width, letterboxed vertically
-      displayedWidth = imgRect.width;
-      displayedHeight = imgRect.width / intrinsicRatio;
-      innerOffsetX = 0;
-      innerOffsetY = (imgRect.height - displayedHeight) / 2;
-    } else {
-      // Pillarbox: image is constrained by height, pillarboxed horizontally
-      displayedHeight = imgRect.height;
-      displayedWidth = imgRect.height * intrinsicRatio;
-      innerOffsetX = (imgRect.width - displayedWidth) / 2;
-      innerOffsetY = 0;
-    }
-
-    // Offset of the displayed image content relative to auditContainerRef
-    const originX = (imgRect.left - containerRect.left) + innerOffsetX;
-    const originY = (imgRect.top - containerRect.top) + innerOffsetY;
-
-    // Normalizing Vision API coordinates [ymin, xmin, ymax, xmax] (0 to 1000 scale)
-    const rawBox = analysisResult?.detectedObject?.box2d || [150, 150, 850, 850];
-    let [ymin, xmin, ymax, xmax] = Array.isArray(rawBox) && rawBox.length === 4
-      ? rawBox.map((v) => Number(v) || 0)
-      : [150, 150, 850, 850];
-
-    // If model returned 0.0 - 1.0 float scale instead of 0 - 1000, normalize to 0 - 1000
-    if (Math.max(ymin, xmin, ymax, xmax) <= 1.0 && Math.max(ymin, xmin, ymax, xmax) > 0) {
-      ymin = Math.round(ymin * 1000);
-      xmin = Math.round(xmin * 1000);
-      ymax = Math.round(ymax * 1000);
-      xmax = Math.round(xmax * 1000);
-    }
-
-    const safeYmin = Math.max(0, Math.min(1000, Math.min(ymin, ymax)));
-    const safeYmax = Math.max(safeYmin + 10, Math.min(1000, Math.max(ymin, ymax)));
-    const safeXmin = Math.max(0, Math.min(1000, Math.min(xmin, xmax)));
-    const safeXmax = Math.max(safeXmin + 10, Math.min(1000, Math.max(xmin, xmax)));
-
-    // Scale calculation correctly mapping 0-1000 normalized vision coordinates to displayed image dimensions:
-    // Scale factor from natural coordinates to displayed screen coordinates
-    const scaleX = displayedWidth / naturalWidth;
-    const scaleY = displayedHeight / naturalHeight;
-
-    // Convert 0-1000 normalized coordinates to intrinsic natural dimensions (pixels):
-    const naturalBoxX = (safeXmin / 1000) * naturalWidth;
-    const naturalBoxY = (safeYmin / 1000) * naturalHeight;
-    const naturalBoxWidth = ((safeXmax - safeXmin) / 1000) * naturalWidth;
-    const naturalBoxHeight = ((safeYmax - safeYmin) / 1000) * naturalHeight;
-
-    // Map to exact displayed dimensions on screen:
-    const boxLeft = originX + (naturalBoxX * scaleX);
-    const boxTop = originY + (naturalBoxY * scaleY);
-    const boxWidth = naturalBoxWidth * scaleX;
-    const boxHeight = naturalBoxHeight * scaleY;
-
-    setBoxOverlayCoords({
-      top: Math.max(0, Math.round(boxTop)),
-      left: Math.max(0, Math.round(boxLeft)),
-      width: Math.max(16, Math.round(boxWidth)),
-      height: Math.max(16, Math.round(boxHeight)),
-      isReady: true,
-    });
-  }, [analysisResult]);
-
-  // Recalculate bounding box when image or analysis result updates
-  useEffect(() => {
-    if (selectedImage && analysisResult) {
-      if (auditImageRef.current?.complete && auditImageRef.current?.naturalWidth) {
-        updateBoundingBoxOverlay();
-      }
-      const timer = setTimeout(() => {
-        updateBoundingBoxOverlay();
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [selectedImage, analysisResult, updateBoundingBoxOverlay]);
-
-  // Handle dynamic resizing & orientation changes with ResizeObserver
-  useEffect(() => {
-    const container = auditContainerRef.current;
-    const img = auditImageRef.current;
-    if (!container) return;
-
-    const observer = new ResizeObserver(() => {
-      updateBoundingBoxOverlay();
-    });
-
-    observer.observe(container);
-    if (img) observer.observe(img);
-
-    window.addEventListener('resize', updateBoundingBoxOverlay);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', updateBoundingBoxOverlay);
-    };
-  }, [updateBoundingBoxOverlay, selectedImage, analysisResult]);
 
   // Clean up camera stream
   const stopCamera = useCallback(() => {
@@ -710,32 +567,6 @@ export default function WasteToWorthScanner() {
     }, 1200);
   };
 
-  // Verify Gemini Normalized Coordinate Mapping [ymin, xmin, ymax, xmax] (0 to 1000)
-  const rawBox = analysisResult?.detectedObject?.box2d || [150, 150, 850, 850];
-  let [ymin, xmin, ymax, xmax] = Array.isArray(rawBox) && rawBox.length === 4
-    ? rawBox.map((v) => Number(v) || 0)
-    : [150, 150, 850, 850];
-
-  // If model returned 0.0 - 1.0 float scale instead of 0 - 1000, normalize to 0 - 1000
-  if (Math.max(ymin, xmin, ymax, xmax) <= 1.0 && Math.max(ymin, xmin, ymax, xmax) > 0) {
-    ymin = Math.round(ymin * 1000);
-    xmin = Math.round(xmin * 1000);
-    ymax = Math.round(ymax * 1000);
-    xmax = Math.round(xmax * 1000);
-  }
-
-  // Ensure coordinate bounds are clamped within 0 to 1000 and valid dimensions
-  const safeYmin = Math.max(0, Math.min(1000, Math.min(ymin, ymax)));
-  const safeYmax = Math.max(safeYmin + 10, Math.min(1000, Math.max(ymin, ymax)));
-  const safeXmin = Math.max(0, Math.min(1000, Math.min(xmin, xmax)));
-  const safeXmax = Math.max(safeXmin + 10, Math.min(1000, Math.max(xmin, xmax)));
-
-  // CSS positioning strictly matching Gemini 0-1000 normalized format
-  const top = `${(safeYmin / 1000) * 100}%`;
-  const left = `${(safeXmin / 1000) * 100}%`;
-  const height = `${((safeYmax - safeYmin) / 1000) * 100}%`;
-  const width = `${((safeXmax - safeXmin) / 1000) * 100}%`;
-
   return (
     <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-4 space-y-6">
       {/* Hidden File Input */}
@@ -1104,76 +935,143 @@ export default function WasteToWorthScanner() {
       ========================================================================= */}
       {stage === 'results' && analysisResult && (
         <div className="space-y-8 animate-in fade-in duration-300">
-          {/* ================= SECTION 3: VISUAL VERIFICATION STROKE & AUDIT ================= */}
+          {/* ================= SECTION 3: SMART OBJECT IDENTIFIER & MATERIAL AUDIT ================= */}
           <div className="bg-[#FAF8F5] p-5 sm:p-7 rounded-3xl shadow-clay-card border border-white space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1A4D3A]/10 pb-4">
               <div>
                 <span className="text-xs font-bold text-[#357A59] uppercase tracking-wider flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-[#357A59]" />
-                  Tahap 3: Visual Verification & Deep Material Audit
+                  Tahap 3: Smart Object Identifier & Material Audit
                 </span>
                 <h2 className="text-xl sm:text-2xl font-black text-[#1A4D3A] tracking-tight mt-0.5">
-                  Objek Sampah Terisolasi
+                  Identifikasi Cerdas & Spesifikasi Material
                 </h2>
               </div>
 
-              {/* Bounding box toggle */}
+              {/* Interactive Smart Overlay Visibility Toggle */}
               <button
                 type="button"
-                onClick={() => setIsOverlayVisible(!isOverlayVisible)}
-                className="flex items-center gap-2 px-3.5 py-1.5 bg-[#F5F2ED] rounded-xl text-xs font-bold text-[#1A4D3A] hover:bg-[#EAE5DC] transition-all cursor-pointer self-start sm:self-auto"
+                onClick={() => setIsSmartOverlayVisible(!isSmartOverlayVisible)}
+                className="flex items-center gap-2 px-3.5 py-1.5 bg-[#F5F2ED] hover:bg-[#EAE5DC] rounded-xl text-xs font-bold text-[#1A4D3A] transition-all cursor-pointer self-start sm:self-auto border border-[#1A4D3A]/10"
               >
-                {isOverlayVisible ? <Eye className="w-4 h-4 text-[#357A59]" /> : <EyeOff className="w-4 h-4 text-[#1A4D3A]/60" />}
-                <span>{isOverlayVisible ? 'Sembunyikan Bounding Box' : 'Tampilkan Bounding Box'}</span>
+                {isSmartOverlayVisible ? <Eye className="w-4 h-4 text-[#357A59]" /> : <EyeOff className="w-4 h-4 text-[#1A4D3A]/60" />}
+                <span>{isSmartOverlayVisible ? 'Sembunyikan Smart Indicator' : 'Tampilkan Smart Indicator'}</span>
               </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-              {/* Image with Visual Verification Bounding Box Overlay (5 Cols) */}
+              {/* Image with Smart Object Identifier & Material Indicator (5 Cols) */}
               <div className="lg:col-span-5 flex justify-center items-start">
-                <div className="w-full rounded-2xl overflow-hidden bg-[#1D2128] shadow-clay-card border-2 border-white p-2 sm:p-3">
+                <div className="w-full rounded-2xl overflow-hidden bg-[#1D2128] shadow-clay-card border-2 border-white p-2 sm:p-3 relative group">
                   {selectedImage && (
-                    <div 
-                      ref={auditContainerRef}
-                      className="relative w-full rounded-xl overflow-hidden select-none leading-none flex items-center justify-center min-h-[220px]"
-                    >
+                    <div className="relative w-full rounded-xl overflow-hidden select-none leading-none flex items-center justify-center min-h-[260px] bg-black/40">
                       <img 
-                        ref={auditImageRef}
                         src={selectedImage} 
                         alt={analysisResult.detectedObject.label || 'Identified Object'} 
-                        onLoad={updateBoundingBoxOverlay}
-                        className="w-full h-auto max-h-[520px] object-contain block mx-auto rounded-xl shadow-md"
+                        className="w-full h-auto max-h-[520px] object-contain block mx-auto rounded-xl shadow-md transition-transform duration-500 group-hover:scale-[1.01]"
                       />
 
-                      {/* Tactile Glowing Bounding Box Overlay strictly mapped to image intrinsic natural dimensions */}
-                      {isOverlayVisible && (
-                        <motion.div 
-                          initial={{ scale: 0.95, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          className="absolute pointer-events-none transition-all duration-300 z-10"
-                          style={{
-                            top: boxOverlayCoords.isReady ? `${boxOverlayCoords.top}px` : top,
-                            left: boxOverlayCoords.isReady ? `${boxOverlayCoords.left}px` : left,
-                            height: boxOverlayCoords.isReady ? `${boxOverlayCoords.height}px` : height,
-                            width: boxOverlayCoords.isReady ? `${boxOverlayCoords.width}px` : width,
-                          }}
-                        >
-                          {/* Green glowing border with corner reticles */}
-                          <div className="w-full h-full border-2 sm:border-3 border-[#6DB677] rounded-lg bg-[#6DB677]/20 shadow-[0_0_20px_rgba(109,182,119,0.6)] relative">
-                            {/* Target Reticle Corners */}
-                            <div className="absolute -top-1 -left-1 w-3.5 h-3.5 border-t-2 border-l-2 border-white" />
-                            <div className="absolute -top-1 -right-1 w-3.5 h-3.5 border-t-2 border-r-2 border-white" />
-                            <div className="absolute -bottom-1 -left-1 w-3.5 h-3.5 border-b-2 border-l-2 border-white" />
-                            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 border-b-2 border-r-2 border-white" />
+                      {/* Tactile Smart Object Identifier & Material Indicator Overlay */}
+                      <AnimatePresence>
+                        {isSmartOverlayVisible && (
+                          <>
+                            {/* 1. Floating "Objek Terverifikasi" Pill Badge at Top-Left */}
+                            <motion.div 
+                              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                              transition={{ duration: 0.25 }}
+                              className="absolute top-3 left-3 z-20 flex items-center gap-2"
+                            >
+                              <div className="flex items-center gap-2 bg-[#1D2128]/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 shadow-lg text-white">
+                                <span className="relative flex h-2.5 w-2.5">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#6DB677] opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#6DB677]"></span>
+                                </span>
+                                <span className="text-[11px] sm:text-xs font-bold tracking-wide">
+                                  Objek Terverifikasi
+                                </span>
+                              </div>
 
-                            {/* Top Identification Badge Pin */}
-                            <div className="absolute -top-7 left-0 bg-[#357A59] text-white text-[10px] sm:text-[11px] font-bold px-2.5 py-0.5 rounded-lg shadow-md flex items-center gap-1.5 whitespace-nowrap z-20">
-                              <span className="w-2 h-2 rounded-full bg-[#6DB677] animate-ping" />
-                              <span>{analysisResult.detectedObject.label}</span>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
+                              <div className="hidden xs:flex items-center gap-1.5 bg-[#215E61]/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#6DB677]/30 text-[10px] sm:text-[11px] font-semibold text-[#E8F2ED] shadow-sm">
+                                <CheckCircle2 className="w-3 h-3 text-[#6DB677]" />
+                                <span>AI Vision</span>
+                              </div>
+                            </motion.div>
+
+                            {/* 2. Interactive Bottom Banner / Floating Clay Card at Bottom */}
+                            <motion.div 
+                              initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 15, scale: 0.98 }}
+                              transition={{ duration: 0.3, ease: 'easeOut' }}
+                              className="absolute inset-x-2.5 bottom-2.5 z-20"
+                            >
+                              <div 
+                                onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
+                                className="bg-[#1D2128]/90 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/20 shadow-2xl space-y-2.5 text-white transition-all cursor-pointer hover:bg-[#1D2128]/95"
+                              >
+                                {/* Header: Glowing Status Indicator + Condition Pill */}
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="relative flex h-2.5 w-2.5">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#6DB677] opacity-60"></span>
+                                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#6DB677] shadow-[0_0_8px_#6DB677]"></span>
+                                    </span>
+                                    <span className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-[#6DB677] truncate">
+                                      AI Material Grade Locked
+                                    </span>
+                                  </div>
+                                  
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-[#FF9E20]/20 text-[#FF9E20] border border-[#FF9E20]/40 shrink-0">
+                                    <Sparkles className="w-3 h-3" />
+                                    <span>{analysisResult.detectedObject.condition}</span>
+                                  </span>
+                                </div>
+
+                                {/* Main Title & Material Grade */}
+                                <div className="space-y-0.5">
+                                  <h3 className="text-sm sm:text-base font-extrabold text-white tracking-tight leading-snug line-clamp-1">
+                                    {analysisResult.detectedObject.label}
+                                  </h3>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[11px] sm:text-xs text-[#6DB677] font-semibold">
+                                      Bahan:
+                                    </span>
+                                    <span className="text-[11px] sm:text-xs text-[#ECEAEA] font-medium truncate">
+                                      {analysisResult.detectedObject.material}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Micro Details Grid (Dimension & Scrap Value) */}
+                                <div className="pt-2 border-t border-white/10 grid grid-cols-2 gap-2 text-[10px] sm:text-[11px] items-center">
+                                  <div className="flex items-center gap-1.5 text-[#A0A5B0]">
+                                    <Package className="w-3.5 h-3.5 text-[#6DB677] shrink-0" />
+                                    <span className="truncate">{analysisResult.detectedObject.dimension || 'Ukuran Sedang'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-[#FF9E20] font-bold justify-end">
+                                    <Coins className="w-3.5 h-3.5 shrink-0" />
+                                    <span className="truncate">{analysisResult.detectedObject.estimatedScrapValue || 'Siap Daur Ulang'}</span>
+                                  </div>
+                                </div>
+
+                                {/* Expandable Spec Note */}
+                                {isDetailsExpanded && (
+                                  <motion.div 
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    className="pt-2 border-t border-white/10 text-[10px] text-[#A0A5B0] flex items-center justify-between"
+                                  >
+                                    <span>Klik untuk sembunyikan rincian sensor</span>
+                                    <ChevronUp className="w-3.5 h-3.5 text-white/60" />
+                                  </motion.div>
+                                )}
+                              </div>
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
                     </div>
                   )}
                 </div>

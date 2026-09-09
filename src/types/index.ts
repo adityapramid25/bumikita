@@ -92,7 +92,7 @@ export interface DetectedWasteObject {
   dimension?: string;
   condition: string;
   estimatedScrapValue?: string;
-  box2d: [number, number, number, number]; // [ymin, xmin, ymax, xmax] normalized 0-1000
+  box2d?: [number, number, number, number]; // Deprecated coordinate format (no longer used)
 }
 
 export interface UpcycleRecommendation {
