@@ -14,11 +14,13 @@ import EcoAIAssistant from '@/src/components/chat/EcoAIAssistant';
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthPage = pathname === '/auth' || pathname?.startsWith('/auth');
+  const isPrivacyPage = pathname === '/privacy-policy' || pathname?.startsWith('/privacy-policy');
+  const isIsolatedPage = isAuthPage || isPrivacyPage;
 
-  // If on the auth page, render only the page content without navbar, footer, or auxiliary modals
-  if (isAuthPage) {
+  // If on isolated pages (auth or privacy policy), render only the page content without navbar, footer, or auxiliary modals
+  if (isIsolatedPage) {
     return (
-      <div className="min-h-screen w-full bg-[#F5F2ED] text-[#1A4D3A] flex flex-col justify-center items-center">
+      <div className="min-h-screen w-full bg-[#F5F2ED] text-[#1A4D3A]">
         {children}
       </div>
     );

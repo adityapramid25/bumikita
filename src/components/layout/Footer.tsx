@@ -130,9 +130,9 @@ export default function Footer() {
         <div className="pt-6 border-t border-[#1A4D3A]/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[#1A4D3A]/60 font-semibold">
           <p>© 2026 BumiKita. Hak Cipta Dilindungi. Dibuat dengan cinta untuk bumi Indonesia.</p>
           <div className="flex items-center gap-4">
-            <span className="hover:text-[#357A59] cursor-pointer">Panduan Zero Waste</span>
-            <span className="hover:text-[#357A59] cursor-pointer">Kebijakan Privasi</span>
-            <span className="hover:text-[#357A59] cursor-pointer">Mitra Kampus</span>
+            <Link href="/quests" className="hover:text-[#357A59] transition-colors">Panduan Zero Waste</Link>
+            <Link href="/privacy-policy" className="hover:text-[#357A59] transition-colors">Kebijakan Privasi</Link>
+            <Link href="/community" className="hover:text-[#357A59] transition-colors">Mitra Kampus</Link>
           </div>
         </div>
       </div>

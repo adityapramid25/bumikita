@@ -89,6 +89,7 @@ export default function AuthCard({
   const [regShowConfirmPassword, setRegShowConfirmPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>('student');
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [agreedToPolicy, setAgreedToPolicy] = useState(false);
 
   // UI Feedback States
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -222,6 +223,11 @@ export default function AuthCard({
 
     if (regPassword !== regConfirmPassword) {
       setErrorMessage('Konfirmasi kata sandi tidak cocok.');
+      return;
+    }
+
+    if (!agreedToPolicy) {
+      setErrorMessage('Anda harus menyetujui Kebijakan Privasi BumiKita.');
       return;
     }
 
@@ -775,13 +781,55 @@ export default function AuthCard({
                   </label>
                 </div>
 
+                {/* Mandatory Privacy Policy Agreement Checkbox */}
+                <div
+                  id="box-privacy-agreement"
+                  className={`flex items-start gap-3 my-4 p-3 rounded-2xl transition-all ${
+                    !agreedToPolicy && errorMessage?.toLowerCase().includes('kebijakan')
+                      ? 'bg-[#FDF2F2] border border-[#DC2626]/40 shadow-clay-sm'
+                      : 'bg-white/40 border border-white/60'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    id="privacy-agreement"
+                    checked={agreedToPolicy}
+                    onChange={(e) => {
+                      setAgreedToPolicy(e.target.checked);
+                      if (errorMessage?.toLowerCase().includes('kebijakan')) {
+                        setErrorMessage(null);
+                      }
+                    }}
+                    className="mt-1 w-4 h-4 rounded-md border-[#357A59] text-[#1A4D3A] focus:ring-[#6DB677] cursor-pointer accent-[#357A59]"
+                    required
+                  />
+                  <label htmlFor="privacy-agreement" className="text-xs text-[#556B61] leading-relaxed cursor-pointer select-none">
+                    Saya telah membaca dan menyetujui{' '}
+                    <Link
+                      className="font-semibold text-[#1A4D3A] underline underline-offset-2 hover:text-[#357A59] transition-colors"
+                      href="/privacy-policy"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      Kebijakan Privasi
+                    </Link>{' '}
+                    serta pemrosesan data sampah BumiKita.
+                  </label>
+                </div>
+
                 {/* Primary Button: Buat Akun */}
                 <motion.button
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.96 }}
-                  disabled={isSubmitting}
+                  id="btn-register-submit"
+                  whileHover={{ y: agreedToPolicy ? -2 : 0 }}
+                  whileTap={{ scale: agreedToPolicy ? 0.96 : 1 }}
+                  disabled={isSubmitting || !agreedToPolicy}
                   type="submit"
-                  className="w-full clay-button py-3.5 px-6 text-sm font-extrabold shadow-clay-green flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-60"
+                  title={!agreedToPolicy ? 'Centang persetujuan Kebijakan Privasi untuk mendaftar' : 'Daftar Akun BumiKita'}
+                  className={`w-full clay-button py-3.5 px-6 text-sm font-extrabold shadow-clay-green flex items-center justify-center gap-2 mt-2 transition-all ${
+                    !agreedToPolicy
+                      ? 'opacity-60 cursor-not-allowed filter grayscale-[30%]'
+                      : 'cursor-pointer hover:shadow-clay-btn'
+                  }`}
                 >
                   {isSubmitting ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
