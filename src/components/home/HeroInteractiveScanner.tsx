@@ -272,17 +272,12 @@ export default function HeroInteractiveScanner() {
           
           {/* LEFT COLUMN (5 Cols): Punchy Value Proposition */}
           <div className="lg:col-span-5 space-y-6">
-            {/* Value Proposition Badge & Quota Counter */}
+            {/* Value Proposition Badge */}
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EBF4EE] text-[#357A59] text-xs font-bold shadow-clay-sm">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>AI Upcycle Hub No. 1</span>
               </span>
-
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF8F5] text-[#1A4D3A] text-xs font-bold shadow-clay-pill">
-                <span className="w-2 h-2 rounded-full bg-[#357A59]" />
-                <span>Quota: 5/5</span>
-              </div>
             </div>
 
             {/* Headline: Exactly 6 words */}

@@ -922,7 +922,7 @@ export default function WasteToWorthScanner() {
           </div>
 
           <p className="text-xs text-[#1A4D3A]/60 font-medium">
-            Membedakan sampah dari latar belakang (lantai/meja/tangan) dengan koordinat bounding box 2D.
+            Menganalisis objek untuk menghasilkan produk dan detail akurat.
           </p>
         </div>
       )}

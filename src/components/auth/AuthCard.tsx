@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '@/src/context/AuthContext';
+import UserProfileCard from './UserProfileCard';
 import {
   Mail,
   Lock,
@@ -54,6 +56,7 @@ const ROLE_OPTIONS: Array<{
 ];
 
 export default function AuthCard({ defaultMode = 'login' }: { defaultMode?: AuthMode }) {
+  const { user, signIn, signUp, isConfigured } = useAuth();
   const [mode, setMode] = useState<AuthMode>(defaultMode);
 
   // Login Form States
@@ -64,6 +67,7 @@ export default function AuthCard({ defaultMode = 'login' }: { defaultMode?: Auth
 
   // Register Form States
   const [regName, setRegName] = useState('');
+  const [regNickname, setRegNickname] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
@@ -87,7 +91,12 @@ export default function AuthCard({ defaultMode = 'login' }: { defaultMode?: Auth
   const isPasswordsMatch = regPassword.length > 0 && regPassword === regConfirmPassword;
   const isPasswordMismatch = regConfirmPassword.length > 0 && regPassword !== regConfirmPassword;
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  // If user is already authenticated with Supabase, render their Profile Dashboard
+  if (user) {
+    return <UserProfileCard />;
+  }
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -97,14 +106,17 @@ export default function AuthCard({ defaultMode = 'login' }: { defaultMode?: Auth
     }
 
     setIsSubmitting(true);
-    // Simulate interactive client-side authentication
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitSuccess(`Selamat datang kembali, ${loginEmail.split('@')[0]}! Mengalihkan ke dashboard...`);
-    }, 900);
+    const res = await signIn(loginEmail.trim(), loginPassword, rememberMe);
+    setIsSubmitting(false);
+
+    if (res.success) {
+      setSubmitSuccess(`Selamat datang kembali! Menghubungkan sesi Supabase...`);
+    } else {
+      setErrorMessage(res.error || 'Email atau kata sandi Anda salah.');
+    }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -129,11 +141,23 @@ export default function AuthCard({ defaultMode = 'login' }: { defaultMode?: Auth
     }
 
     setIsSubmitting(true);
-    // Simulate interactive registration
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitSuccess(`Akun berhasil dibuat! Bonus +50 Daun Points telah ditambahkan ke profil ${regName}.`);
-    }, 1100);
+    const cleanNick = regNickname.trim().replace(/^@/, '');
+    const res = await signUp({
+      email: regEmail.trim(),
+      password: regPassword,
+      fullName: regName.trim(),
+      nickname: cleanNick || undefined,
+      role: selectedRole,
+    });
+    setIsSubmitting(false);
+
+    if (res.success) {
+      setSubmitSuccess(
+        `Akun berhasil dibuat di Supabase! Bonus +50 Daun Points telah ditambahkan ke profil ${regName.trim()}.`
+      );
+    } else {
+      setErrorMessage(res.error || 'Gagal mendaftar akun ke Supabase.');
+    }
   };
 
   const handleGoogleAuth = () => {
@@ -440,7 +464,7 @@ export default function AuthCard({ defaultMode = 'login' }: { defaultMode?: Auth
                 {/* Field 1: Nama Lengkap */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-[#1A4D3A] flex items-center gap-1.5">
-                    <span>Nama Lengkap</span>
+                    <span>Nama Lengkap (Billing/Faktur)</span>
                   </label>
                   <div className="relative flex items-center">
                     <div className="absolute left-3.5 text-[#1A4D3A]/40 pointer-events-none">
@@ -452,6 +476,33 @@ export default function AuthCard({ defaultMode = 'login' }: { defaultMode?: Auth
                       onChange={(e) => setRegName(e.target.value)}
                       placeholder="Contoh: Aditya Pramudya"
                       className="w-full bg-[#F5F2ED]/80 shadow-clay-inset rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm text-[#1A4D3A] placeholder-[#1A4D3A]/30 focus:outline-none focus:ring-2 focus:ring-[#357A59]/40 border border-white/40 transition-all font-medium"
+                    />
+                  </div>
+                </div>
+
+                {/* Field 1b: Nickname Handle */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <label className="font-bold text-[#1A4D3A]">
+                      Nickname Unik (@handle)
+                    </label>
+                    <span className="text-[10px] text-[#357A59] font-medium">
+                      Alias publik di Green Market
+                    </span>
+                  </div>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3.5 text-xs font-bold text-[#357A59] pointer-events-none">
+                      @
+                    </span>
+                    <input
+                      type="text"
+                      value={regNickname}
+                      onChange={(e) =>
+                        setRegNickname(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))
+                      }
+                      placeholder="ecowarrior"
+                      maxLength={30}
+                      className="w-full bg-[#F5F2ED]/80 shadow-clay-inset rounded-2xl pl-8 pr-4 py-3 text-xs sm:text-sm text-[#1A4D3A] placeholder-[#1A4D3A]/30 focus:outline-none focus:ring-2 focus:ring-[#357A59]/40 border border-white/40 transition-all font-mono"
                     />
                   </div>
                 </div>

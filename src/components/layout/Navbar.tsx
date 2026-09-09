@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEco } from '@/src/context/EcoContext';
+import { useAuth } from '@/src/context/AuthContext';
 import { 
   Sparkles, 
   ShoppingBag, 
@@ -34,6 +35,7 @@ export default function Navbar() {
     setIsRewardModalOpen,
     treesPlanted,
   } = useEco();
+  const { user, profile } = useAuth();
 
   const totalCartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -60,9 +62,6 @@ export default function Navbar() {
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-lg sm:text-xl font-bold tracking-tight text-[#1A4D3A] shrink-0">
               Bumi<span className="text-[#357A59]">Kita</span>
-            </span>
-            <span className="hidden md:inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20 shrink-0">
-              GEN-Z ECO HUB
             </span>
           </div>
         </Link>
@@ -156,10 +155,40 @@ export default function Navbar() {
           <Link
             id="btn-nav-auth"
             href="/auth"
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center bg-[#357A59] text-white shadow-clay-btn shrink-0 border border-white/60 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            title="Akun Pengguna & Masuk BumiKita"
+            className={`flex items-center gap-2 p-1 sm:p-1.5 rounded-2xl transition-all cursor-pointer shrink-0 border border-white/80 hover:scale-105 active:scale-95 ${
+              user
+                ? 'bg-[#FAF8F5] shadow-clay-card'
+                : 'w-11 h-11 sm:w-12 sm:h-12 justify-center bg-[#357A59] text-white shadow-clay-btn'
+            }`}
+            title={user ? `Profil: @${profile?.nickname || 'saya'}` : 'Akun Pengguna & Masuk BumiKita'}
           >
-            <User className="w-5 h-5 text-white" />
+            {user ? (
+              <>
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#E8F2ED] flex items-center justify-center overflow-hidden text-[#357A59] font-bold text-xs shadow-clay-inset border border-white">
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={profile.full_name || 'Avatar'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>
+                      {(profile?.full_name || user.email || 'U')[0].toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="hidden md:flex flex-col text-left pr-2">
+                  <span className="text-xs font-black text-[#1A4D3A] leading-tight line-clamp-1 max-w-[90px]">
+                    {profile?.full_name?.split(' ')[0] || user.email?.split('@')[0]}
+                  </span>
+                  <span className="text-[10px] font-bold text-[#357A59] leading-tight">
+                    @{profile?.nickname || 'ecowarrior'}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <User className="w-5 h-5 text-white" />
+            )}
           </Link>
         </div>
       </div>
