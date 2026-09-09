@@ -2,9 +2,10 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useEco } from '@/src/context/EcoContext';
-import { SAMPLE_TRASH_ITEMS } from '@/src/data/mockData';
-import { UpcycleProjectResult } from '@/src/types';
+import { WasteAnalysisResult, UpcycleRecommendation } from '@/src/types';
 import { generateUpcyclePDF } from '@/src/lib/pdfGenerator';
+import confetti from 'canvas-confetti';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, 
   Upload, 
@@ -18,58 +19,142 @@ import {
   Share2, 
   CheckCircle2, 
   RefreshCw,
-  Sliders,
-  ChevronRight,
-  Info,
+  Eye,
+  EyeOff,
   SwitchCamera,
   X,
   Zap,
-  Smartphone,
-  Square,
-  RectangleHorizontal,
-  RectangleVertical,
-  Maximize2,
-  Image as ImageIcon,
   Download,
   FileText,
-  Printer
+  Lightbulb,
+  ArrowRight,
+  ShieldCheck,
+  Layers,
+  HelpCircle
 } from 'lucide-react';
 
-type CameraAspectRatio = '1:1' | '4:3' | '16:9' | '9:16';
+const SUGGESTION_CHIPS = [
+  '🌿 Pot Tanaman Estetik',
+  '💼 Dompet & Pouch',
+  '🗄️ Organizer Meja',
+  '💡 Lampu Kamar Kost',
+  '🎮 Mainan / Miniatur',
+  '✨ Rekomendasi Bebas AI'
+];
+
+const SAMPLE_DEMO_ITEMS = [
+  {
+    name: 'Botol Plastik Aqua 600ml',
+    icon: '🧴',
+    image: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Bikin pot tanaman self-watering atau wadah pensil estetik untuk meja belajar'
+  },
+  {
+    name: 'Kardus Sepatu / Paket',
+    icon: '📦',
+    image: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Ubah jadi organizer meja bertingkat dengan slot charger HP'
+  },
+  {
+    name: 'Celana Jeans Denim Rusak',
+    icon: '👖',
+    image: 'https://images.unsplash.com/photo-1542272604-780c96856592?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Upcycle jadi tas selempang gadget atau laptop sleeve tanpa mesin jahit'
+  }
+];
+
+// Helper: Resize and optimize image to max 1024x1024 WebP to preserve sharp edges and optimize latency
+async function preprocessImage(dataUrlOrBlob: string | Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const maxDim = 1024;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(typeof dataUrlOrBlob === 'string' ? dataUrlOrBlob : '');
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+
+      try {
+        const webp = canvas.toDataURL('image/webp', 0.88);
+        if (webp.startsWith('data:image/webp')) {
+          resolve(webp);
+          return;
+        }
+      } catch (e) {
+        console.warn('WebP conversion fallback to jpeg:', e);
+      }
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = (err) => reject(err);
+
+    if (typeof dataUrlOrBlob === 'string') {
+      img.src = dataUrlOrBlob;
+    } else {
+      img.src = URL.createObjectURL(dataUrlOrBlob);
+    }
+  });
+}
 
 export default function WasteToWorthScanner() {
   const { addDaunPoints, addCommunityPost } = useEco();
 
-  const [prompt, setPrompt] = useState('');
+  // Workflow Stages: 'capture' | 'analyzing' | 'results'
+  const [stage, setStage] = useState<'capture' | 'analyzing' | 'results'>('capture');
+
+  // Input States
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [skillLevel, setSkillLevel] = useState<'Beginner' | 'Crafty' | 'Pro Maker'>('Beginner');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<UpcycleProjectResult | null>(null);
+  const [userPrompt, setUserPrompt] = useState('');
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isCameraConnecting, setIsCameraConnecting] = useState(false);
+  const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
+
+  // Analysis Result States
+  const [analysisResult, setAnalysisResult] = useState<WasteAnalysisResult | null>(null);
+  const [selectedRecId, setSelectedRecId] = useState<string | null>(null);
+  const [isOverlayVisible, setIsOverlayVisible] = useState(true);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [checkedMaterials, setCheckedMaterials] = useState<string[]>([]);
   const [isClaimed, setIsClaimed] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
-  const [pdfSuccessMessage, setPdfSuccessMessage] = useState(false);
-  const [scanProgress, setScanProgress] = useState(0);
-  const [scanStageText, setScanStageText] = useState('Memulai pemindaian AI...');
-  const [scanStageIndex, setScanStageIndex] = useState(1);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Camera State
-  const [isCameraActive, setIsCameraActive] = useState(false);
-  const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
-  const [aspectRatio, setAspectRatio] = useState<CameraAspectRatio>('4:3');
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [hasMultipleCameras, setHasMultipleCameras] = useState(true);
+  // Loading animation state
+  const [analyzingStepText, setAnalyzingStepText] = useState('Mengisolasi objek sampah foreground...');
+  const [analyzingProgress, setAnalyzingProgress] = useState(15);
 
-  const [isCameraConnecting, setIsCameraConnecting] = useState(false);
+  // Community Share Modal State
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareTitle, setShareTitle] = useState('');
+  const [shareStory, setShareStory] = useState('');
+  const [shareSuccess, setShareSuccess] = useState(false);
 
+  // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Clean up media stream when component unmounts or camera closes
+  // Clean up camera stream
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
@@ -89,7 +174,21 @@ export default function WasteToWorthScanner() {
     };
   }, [stopCamera]);
 
-  // Callback ref to immediately attach stream when video DOM element mounts
+  // Check multiple cameras
+  useEffect(() => {
+    if (navigator?.mediaDevices?.enumerateDevices) {
+      navigator.mediaDevices.enumerateDevices()
+        .then((devices) => {
+          const videoDevices = devices.filter((d) => d.kind === 'videoinput');
+          if (videoDevices.length > 1) {
+            setHasMultipleCameras(true);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  // Callback ref to connect stream to video
   const handleVideoRef = useCallback((node: HTMLVideoElement | null) => {
     videoRef.current = node;
     if (node && streamRef.current) {
@@ -101,1303 +200,1104 @@ export default function WasteToWorthScanner() {
     }
   }, []);
 
-  // Check available camera devices
-  useEffect(() => {
-    if (navigator?.mediaDevices?.enumerateDevices) {
-      navigator.mediaDevices.enumerateDevices()
-        .then((devices) => {
-          const videoDevices = devices.filter((device) => device.kind === 'videoinput');
-          if (videoDevices.length > 1) {
-            setHasMultipleCameras(true);
-          }
-        })
-        .catch(() => {});
-    }
-  }, []);
-
   const startCamera = async (facing: 'environment' | 'user' = cameraFacing) => {
     setCameraError(null);
     setIsCameraConnecting(true);
-    stopCamera();
 
     try {
-      if (!navigator?.mediaDevices?.getUserMedia) {
-        throw new Error('Fitur kamera tidak didukung di browser ini. Silakan gunakan upload foto.');
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
       }
 
-      let stream: MediaStream | null = null;
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: facing },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      };
 
-      // Strategy 1: Ideal facingMode and standard HD resolution
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: facing },
-            width: { ideal: 1280, min: 640 },
-            height: { ideal: 720, min: 480 },
-          },
-          audio: false,
-        });
-      } catch {
-        // Strategy 2: Simple facingMode string
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: facing,
-            },
-            audio: false,
-          });
-        } catch {
-          // Strategy 3: Pure video fallback (any available camera)
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: false,
-          });
-        }
-      }
-
-      if (!stream) {
-        throw new Error('Tidak dapat memperoleh stream video dari kamera.');
-      }
-
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-      setCameraFacing(facing);
-      setIsCameraActive(true);
-      setIsCameraConnecting(false);
 
-      // If video ref is already available, attach directly
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch(() => {});
-        };
-        videoRef.current.play().catch(() => {});
+        await videoRef.current.play().catch(() => {});
       }
-    } catch (err: any) {
-      console.error('Camera error:', err);
+
+      setIsCameraActive(true);
       setIsCameraConnecting(false);
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setCameraError('Izin akses kamera ditolak oleh browser/sistem. Klik ikon gembok/kamera di address bar browser untuk mengizinkan kamera, atau gunakan upload gambar.');
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        setCameraError('Kamera tidak terdeteksi pada perangkat ini. Silakan gunakan tombol upload file.');
-      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-        setCameraError('Kamera sedang dipakai oleh aplikasi lain (seperti Zoom/Meet). Tutup aplikasi tersebut dan coba lagi.');
-      } else {
-        setCameraError(err.message || 'Gagal mengakses kamera. Silakan coba lagi atau gunakan upload foto.');
-      }
-      setIsCameraActive(false);
+    } catch (err: any) {
+      console.error('Failed to start camera:', err);
+      setIsCameraConnecting(false);
+      setCameraError(
+        'Kamera tidak dapat diakses. Pastikan izin kamera telah diberikan atau gunakan tombol unggah foto di bawah.'
+      );
     }
   };
 
-  const flipCamera = () => {
+  const toggleCameraFacing = () => {
     const nextFacing = cameraFacing === 'environment' ? 'user' : 'environment';
-    startCamera(nextFacing);
+    setCameraFacing(nextFacing);
+    if (isCameraActive) {
+      startCamera(nextFacing);
+    }
   };
 
-  const switchFacing = (facing: 'environment' | 'user') => {
-    if (cameraFacing === facing && isCameraActive) return;
-    startCamera(facing);
-  };
-
-  const capturePhoto = () => {
+  const handleCapturePhoto = async () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
-    const canvas = canvasRef.current || document.createElement('canvas');
 
-    const videoWidth = video.videoWidth || 1280;
-    const videoHeight = video.videoHeight || 720;
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = video.videoWidth || 640;
+    tempCanvas.height = video.videoHeight || 480;
+    const ctx = tempCanvas.getContext('2d');
+    if (!ctx) return;
 
-    // Calculate crop rectangle according to chosen aspect ratio
-    let targetRatio = 4 / 3;
-    if (aspectRatio === '1:1') targetRatio = 1 / 1;
-    else if (aspectRatio === '4:3') targetRatio = 4 / 3;
-    else if (aspectRatio === '16:9') targetRatio = 16 / 9;
-    else if (aspectRatio === '9:16') targetRatio = 9 / 16;
+    ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+    const rawData = tempCanvas.toDataURL('image/jpeg', 0.9);
 
-    const sourceRatio = videoWidth / videoHeight;
-
-    let cropWidth = videoWidth;
-    let cropHeight = videoHeight;
-    let cropX = 0;
-    let cropY = 0;
-
-    if (sourceRatio > targetRatio) {
-      // Source video is wider than target ratio -> crop horizontally
-      cropWidth = videoHeight * targetRatio;
-      cropHeight = videoHeight;
-      cropX = (videoWidth - cropWidth) / 2;
-      cropY = 0;
-    } else {
-      // Source video is taller than target ratio -> crop vertically
-      cropWidth = videoWidth;
-      cropHeight = videoWidth / targetRatio;
-      cropX = 0;
-      cropY = (videoHeight - cropHeight) / 2;
-    }
-
-    canvas.width = Math.round(cropWidth);
-    canvas.height = Math.round(cropHeight);
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // If user/selfie camera, mirror horizontally for natural photo preview
-      if (cameraFacing === 'user') {
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-      }
-
-      ctx.drawImage(
-        video,
-        cropX,
-        cropY,
-        cropWidth,
-        cropHeight,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
-      setSelectedImage(dataUrl);
-      stopCamera();
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
-        stopCamera();
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSelectSample = (sample: typeof SAMPLE_TRASH_ITEMS[0]) => {
-    setPrompt(sample.samplePrompt);
-    setSelectedImage(null);
     stopCamera();
+
+    // Optimize to max 1024x1024 WebP
+    const optimized = await preprocessImage(rawData);
+    setSelectedImage(optimized);
   };
 
-  const handleGenerate = async () => {
-    if (!prompt.trim() && !selectedImage) {
-      setError('Ambil foto sampah dengan kamera, upload gambar, atau pilih salah satu sampel sampah di bawah.');
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const optimized = await preprocessImage(file);
+      setSelectedImage(optimized);
+      stopCamera();
+    } catch (err) {
+      console.error('File optimization error:', err);
+    }
+  };
+
+  const handleSelectDemoItem = async (item: typeof SAMPLE_DEMO_ITEMS[0]) => {
+    stopCamera();
+    try {
+      const optimized = await preprocessImage(item.image);
+      setSelectedImage(optimized);
+      setUserPrompt(item.prompt);
+    } catch (e) {
+      setSelectedImage(item.image);
+      setUserPrompt(item.prompt);
+    }
+  };
+
+  // Perform AI Waste Analysis
+  const handleAnalyzeWaste = async () => {
+    if (!selectedImage) {
+      setErrorMessage('Silakan ambil foto atau unggah gambar sampah terlebih dahulu.');
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
-    setResult(null);
-    setCompletedSteps([]);
-    setCheckedMaterials([]);
-    setIsClaimed(false);
-    setScanProgress(8);
-    setScanStageIndex(1);
-    setScanStageText('Memindai piksel gambar & menganalisis geometri objek...');
+    setStage('analyzing');
+    setErrorMessage(null);
+    setAnalyzingProgress(20);
+    setAnalyzingStepText('Mengisolasi objek sampah foreground...');
 
-    // Progress simulation timer for transparent deep inspection feedback
-    const progressTimer = setInterval(() => {
-      setScanProgress((prev) => {
-        if (prev < 25) {
-          setScanStageIndex(1);
-          setScanStageText('Memindai piksel & kontur fisik objek dari foto...');
-          return prev + 5;
-        } else if (prev < 55) {
-          setScanStageIndex(2);
-          setScanStageText('Mengidentifikasi klasifikasi material & polimer spesifik...');
-          return prev + 6;
-        } else if (prev < 80) {
-          setScanStageIndex(3);
-          setScanStageText('Menganalisis kelayakan struktural & durabilitas DIY...');
-          return prev + 5;
-        } else if (prev < 95) {
-          setScanStageIndex(4);
-          setScanStageText('Menyusun blueprint presisi, alat, bahan, dan 3-Pillar Benefits...');
-          return prev + 3;
-        }
-        return prev;
-      });
-    }, 160);
+    const timer1 = setTimeout(() => {
+      setAnalyzingProgress(50);
+      setAnalyzingStepText('Memeriksa audit material & komposisi polimer...');
+    }, 900);
 
-    const minDelayPromise = new Promise((resolve) => setTimeout(resolve, selectedImage ? 2200 : 900));
+    const timer2 = setTimeout(() => {
+      setAnalyzingProgress(80);
+      setAnalyzingStepText('Membuat 3 rekomendasi upcycling & blueprint...');
+    }, 1800);
 
     try {
-      const fetchPromise = fetch('/api/gemini/upcycle', {
+      const response = await fetch('/api/gemini/upcycle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt,
+          prompt: userPrompt,
           imageBase64: selectedImage,
-          skillLevel,
+          mimeType: selectedImage.startsWith('data:image/webp') ? 'image/webp' : 'image/jpeg',
         }),
-      }).then(async (res) => {
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Gagal memproses ide upcycle. Coba lagi!');
-        }
-        return data.data;
       });
 
-      const [blueprintResult] = await Promise.all([fetchPromise, minDelayPromise]);
-      clearInterval(progressTimer);
-      setScanProgress(100);
-      setScanStageText('Analisis AI Vision Selesai! Blueprint siap dirakit.');
-      setResult(blueprintResult);
+      const json = await response.json();
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+
+      if (!response.ok || !json.data) {
+        throw new Error(json.error || 'Gagal memproses analisis gambar sampah');
+      }
+
+      const resData: WasteAnalysisResult = json.data;
+      setAnalysisResult(resData);
+      if (resData.recommendations && resData.recommendations.length > 0) {
+        setSelectedRecId(resData.recommendations[0].id);
+      }
+      setCompletedSteps([]);
+      setCheckedMaterials([]);
+      setIsClaimed(false);
+      setAnalyzingProgress(100);
+
+      // Short delay for smooth transition
+      setTimeout(() => {
+        setStage('results');
+      }, 400);
+
     } catch (err: any) {
-      clearInterval(progressTimer);
-      setError(err.message || 'Terjadi kesalahan saat memproses AI. Silakan coba lagi.');
-    } finally {
-      clearInterval(progressTimer);
-      setIsLoading(false);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      console.error('Analysis error:', err);
+      setErrorMessage(err.message || 'Terjadi kesalahan saat memindai sampah. Silakan coba lagi.');
+      setStage('capture');
     }
   };
 
-  const toggleMaterialCheck = (mat: string) => {
-    setCheckedMaterials((prev) =>
-      prev.includes(mat) ? prev.filter((m) => m !== mat) : [...prev, mat]
-    );
+  const handleResetScanner = () => {
+    stopCamera();
+    setSelectedImage(null);
+    setUserPrompt('');
+    setAnalysisResult(null);
+    setSelectedRecId(null);
+    setCompletedSteps([]);
+    setCheckedMaterials([]);
+    setIsClaimed(false);
+    setStage('capture');
   };
 
-  const toggleStepComplete = (stepNum: number) => {
-    setCompletedSteps((prev) =>
-      prev.includes(stepNum) ? prev.filter((s) => s !== stepNum) : [...prev, stepNum]
-    );
+  // Active Recommendation
+  const activeRec: UpcycleRecommendation | null = 
+    analysisResult?.recommendations.find((r) => r.id === selectedRecId) || 
+    analysisResult?.recommendations[0] || 
+    null;
+
+  // Toggle step completion
+  const handleToggleStep = (index: number) => {
+    setCompletedSteps((prev) => {
+      if (prev.includes(index)) {
+        return prev.filter((i) => i !== index);
+      } else {
+        return [...prev, index];
+      }
+    });
   };
 
-  const handleDownloadPDF = () => {
-    if (!result) return;
-    setIsDownloadingPdf(true);
+  // Toggle material check
+  const handleToggleMaterial = (mat: string) => {
+    setCheckedMaterials((prev) => {
+      if (prev.includes(mat)) {
+        return prev.filter((m) => m !== mat);
+      } else {
+        return [...prev, mat];
+      }
+    });
+  };
+
+  // Claim Daun Points
+  const handleClaimPoints = () => {
+    if (isClaimed) return;
+    addDaunPoints(60, `Upcycling Blueprint: ${activeRec?.title || 'Karya Daur Ulang'}`);
+    setIsClaimed(true);
+
     try {
-      generateUpcyclePDF(result);
-      setPdfSuccessMessage(true);
-      setTimeout(() => setPdfSuccessMessage(false), 4000);
+      confetti({
+        particleCount: 75,
+        spread: 70,
+        origin: { y: 0.65 },
+        colors: ['#357A59', '#6DB677', '#FF9E20', '#FAF8F5'],
+      });
+    } catch (e) {}
+  };
+
+  // Download PDF Blueprint
+  const handleDownloadPdf = () => {
+    if (!analysisResult || !activeRec) return;
+    setIsDownloadingPdf(true);
+
+    try {
+      // Map to UpcycleProjectResult format for pdf generator
+      generateUpcyclePDF({
+        detectedItemName: analysisResult.detectedObject.label,
+        detectedMaterialType: analysisResult.detectedObject.material,
+        detectedCondition: analysisResult.detectedObject.condition,
+        projectName: activeRec.title,
+        tagline: activeRec.summary,
+        vibe: 'Eco-Minimalist Craft',
+        productDescription: activeRec.summary,
+        difficulty: activeRec.difficulty,
+        timeEstimate: activeRec.estimatedTime,
+        estimatedValueIdr: parseInt(activeRec.benchmarkPrice.replace(/\D/g, '')) || 35000,
+        co2SavedKg: 1.8,
+        landfillDivertedGrams: 120,
+        pointsRewarded: 60,
+        requiredMaterials: activeRec.materialsNeeded,
+        toolsNeeded: ['Cutter / gunting serbaguna', 'Penggaris & spidol', 'Lem serbaguna'],
+        steps: activeRec.steps.map((s, idx) => ({
+          stepNumber: idx + 1,
+          title: `Langkah ${idx + 1}`,
+          instruction: s,
+          timeMinutes: 5,
+        })),
+        stylingTips: activeRec.finishingTips || 'Gunakan cat matte dan rapikan tepi potongan untuk estetika modern.',
+      });
     } catch (err) {
-      console.error('Error generating PDF:', err);
-      setError('Gagal membuat file PDF. Silakan coba beberapa saat lagi.');
+      console.error('PDF export error:', err);
     } finally {
       setIsDownloadingPdf(false);
     }
   };
 
-  const handleClaimPointsAndShare = () => {
-    if (!result || isClaimed) return;
-    setIsClaimed(true);
-    addDaunPoints(result.pointsRewarded || 50, `Menyelesaikan Upcycle: ${result.projectName}`);
-    
-    // Auto-share to community feed
+  // Submit Community Post
+  const handleShareToCommunity = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeRec || !selectedImage) return;
+
     addCommunityPost({
       author: {
-        name: 'Kamu (Gen-Z Maker)',
-        handle: '@kamu.ecocreator',
+        name: 'Kamu (Maker Gen-Z)',
+        handle: '@kamu_ecowarrior',
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        badge: 'Upcycle Pioneer',
-        campus: 'BumiKita Member',
+        badge: 'Eco Maker Novice',
+        campus: 'BumiKita Hub',
       },
-      title: result.projectName,
-      description: `${result.tagline} — Dibuat dengan bantuan Gemini AI Upcycle Studio! Menghemat ${result.co2SavedKg}kg CO2e.`,
-      beforeImage: selectedImage || 'https://images.unsplash.com/photo-1542272604-780c96856592?w=600&auto=format&fit=crop&q=80',
-      afterImage: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=80',
-      originalTrashItem: prompt || 'Barang Bekas Rumah Tangga',
-      tags: ['#BumiKitaMaker', '#GeminiUpcycle', `#${result.vibe.replace(/\s+/g, '')}`],
+      title: shareTitle || activeRec.title,
+      description: shareStory || activeRec.summary,
+      beforeImage: selectedImage,
+      afterImage: selectedImage,
+      originalTrashItem: analysisResult?.detectedObject.label || 'Sampah Terpilih',
+      userLiked: true,
+      tags: ['#BumiKitaUpcycle', '#ZeroWasteKampus', '#DIYProject'],
     });
+
+    setShareSuccess(true);
+    setTimeout(() => {
+      setIsShareModalOpen(false);
+      setShareSuccess(false);
+    }, 1200);
   };
 
+  // Normalized Bounding Box [ymin, xmin, ymax, xmax] in 0-1000 scale
+  const box2d = analysisResult?.detectedObject?.box2d || [180, 240, 840, 760];
+  const boxTop = (box2d[0] / 1000) * 100;
+  const boxLeft = (box2d[1] / 1000) * 100;
+  const boxHeight = ((box2d[2] - box2d[0]) / 1000) * 100;
+  const boxWidth = ((box2d[3] - box2d[1]) / 1000) * 100;
+
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8">
-      {/* Hidden Canvas for Video Snapshots */}
-      <canvas ref={canvasRef} className="hidden" />
+    <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-4 space-y-6">
+      {/* Hidden File Input */}
+      <input 
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
 
-      {/* Studio Header */}
-      <div className="bg-[#FAF8F5] rounded-[28px] p-6 sm:p-8 shadow-clay-card border border-white">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EBF4EE] border border-[#6DB677]/40 text-[#1A4D3A] text-xs font-bold shadow-clay-sm">
-              <Sparkles className="w-3.5 h-3.5 text-[#FF9E20] fill-[#FF9E20]" />
-              <span>Waste-to-Worth AI Studio Powered by Gemini 3.7</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1A4D3A] tracking-tight">
-              Scan Sampah, Sulap Jadi Produk Keren
-            </h2>
-            <p className="text-sm sm:text-base text-[#1A4D3A]/70 max-w-2xl">
-              Gunakan kamera ponsel/laptop untuk memindai sampah langsung, atau upload foto barang bekas (jeans sobek, botol boba, kardus). AI kami akan merancang resep DIY upcycle langkah-demi-langkah bernilai jual!
-            </p>
+      {/* Header Banner */}
+      <div className="bg-gradient-clay p-5 sm:p-7 rounded-3xl shadow-clay-card border border-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20 text-xs font-black uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-[#FF9E20]" />
+              AI Multimodal Camera Vision
+            </span>
+            <span className="text-xs font-semibold text-[#1A4D3A]/60 hidden sm:inline">
+              Powered by gemini-3.8-flash
+            </span>
           </div>
-
-          <div className="flex items-center gap-2 bg-[#E8F2ED] p-3 rounded-2xl border border-[#357A59]/20 shadow-clay-inset">
-            <div className="w-10 h-10 rounded-xl bg-gradient-earth text-white flex items-center justify-center font-black text-sm">
-              +75
-            </div>
-            <div>
-              <p className="text-xs font-bold text-[#1A4D3A]">Reward Daun</p>
-              <p className="text-[11px] text-[#357A59] font-semibold">Tiap Upcycle DIY yang selesai</p>
-            </div>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1A4D3A]">
+            Waste-to-Worth <span className="text-[#357A59]">AI Scanner</span>
+          </h1>
+          <p className="text-sm text-[#1A4D3A]/70 max-w-2xl mt-1">
+            Isolasi objek sampah secara otomatis, audit jenis material polimer, dan dapatkan 3 rekomendasi kreasi bernilai jual tinggi dengan blueprint pembuatan instan.
+          </p>
         </div>
 
-        {/* Input Interface */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
-          {/* Left Column: Camera Scanner & Upload */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-extrabold text-[#1A4D3A] uppercase tracking-wider">
-                1. Scan Kamera / Upload Foto Sampah
-              </label>
-              {selectedImage && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedImage(null)}
-                  className="text-xs font-bold text-[#DC2626] hover:underline"
-                >
-                  Hapus Foto
-                </button>
-              )}
-            </div>
+        {stage === 'results' && (
+          <button
+            onClick={handleResetScanner}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#FAF8F5] rounded-2xl shadow-clay-card border border-white hover:scale-105 active:scale-95 transition-all text-sm font-bold text-[#1A4D3A] cursor-pointer self-start md:self-auto shrink-0"
+          >
+            <RefreshCw className="w-4 h-4 text-[#357A59]" />
+            <span>Pindai Sampah Lain</span>
+          </button>
+        )}
+      </div>
 
-            {/* Hidden File Input */}
-            <input 
-              ref={fileInputRef}
-              type="file" 
-              accept="image/*" 
-              onChange={handleImageUpload} 
-              className="hidden" 
-            />
+      {/* Error Notification */}
+      {errorMessage && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 shadow-sm animate-in fade-in duration-200">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm font-medium">
+            {errorMessage}
+          </div>
+          <button 
+            onClick={() => setErrorMessage(null)} 
+            className="text-amber-700 hover:text-amber-900 font-bold p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
-            {/* LIVE CAMERA VIEWFINDER */}
-            {isCameraActive ? (
-              <div className="space-y-3">
-                {/* Viewfinder Aspect Ratio & Controls Toolbar */}
-                <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-[#FAF8F5] rounded-2xl border border-white shadow-clay-sm">
-                  {/* Aspect Ratio Selector Pills */}
-                  <div className="flex items-center gap-1 bg-[#EAE5DC]/60 p-1 rounded-xl">
-                    {(['1:1', '4:3', '16:9', '9:16'] as CameraAspectRatio[]).map((ratio) => (
-                      <button
-                        key={ratio}
-                        type="button"
-                        onClick={() => setAspectRatio(ratio)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
-                          aspectRatio === ratio
-                            ? 'bg-[#357A59] text-white shadow-clay-green'
-                            : 'text-[#1A4D3A]/70 hover:text-[#1A4D3A] hover:bg-white/50'
-                        }`}
-                      >
-                        {ratio}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Camera Facing Selector (Mobile / Front & Back) */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => switchFacing('environment')}
-                      title="Kamera Belakang / Utama"
-                      className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold flex items-center gap-1 transition-all cursor-pointer ${
-                        cameraFacing === 'environment'
-                          ? 'bg-[#1A4D3A] text-white shadow-clay-sm'
-                          : 'bg-[#FAF8F5] text-[#1A4D3A]/70 hover:bg-[#EDE8E0]'
-                      }`}
-                    >
-                      <Camera className="w-3.5 h-3.5" />
-                      <span>Belakang</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => switchFacing('user')}
-                      title="Kamera Depan / Selfie"
-                      className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold flex items-center gap-1 transition-all cursor-pointer ${
-                        cameraFacing === 'user'
-                          ? 'bg-[#1A4D3A] text-white shadow-clay-sm'
-                          : 'bg-[#FAF8F5] text-[#1A4D3A]/70 hover:bg-[#EDE8E0]'
-                      }`}
-                    >
-                      <Smartphone className="w-3.5 h-3.5" />
-                      <span>Depan</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Video Viewfinder Container with Dynamic Aspect Ratio */}
-                <div 
-                  className={`relative rounded-2xl overflow-hidden shadow-clay-card border-2 border-[#357A59] bg-[#111827] flex flex-col justify-between transition-all duration-300 ${
-                    aspectRatio === '1:1'
-                      ? 'aspect-square max-h-[380px] w-full'
-                      : aspectRatio === '4:3'
-                      ? 'aspect-[4/3] max-h-[380px] w-full'
-                      : aspectRatio === '16:9'
-                      ? 'aspect-video max-h-[360px] w-full'
-                      : 'aspect-[9/16] max-h-[460px] w-full max-w-[280px] mx-auto'
-                  }`}
-                >
-                  {/* Live Video Feed with Callback Ref */}
-                  <video
+      {/* =========================================================================
+          STAGE 1 & 2: CAMERA CAPTURE, INGESTION & OPTIONAL CREATIVE PROMPT
+      ========================================================================= */}
+      {stage === 'capture' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left / Top Viewfinder Area (7 Cols) */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="relative w-full aspect-[4/3] bg-[#EAE5DC] rounded-3xl overflow-hidden shadow-clay-card border-2 border-white/80 flex items-center justify-center">
+              {/* State A: Live Camera Active */}
+              {isCameraActive && (
+                <div className="relative w-full h-full">
+                  <video 
                     ref={handleVideoRef}
-                    playsInline
-                    autoPlay
-                    muted
-                    onCanPlay={(e) => {
-                      (e.target as HTMLVideoElement).play().catch(() => {});
-                    }}
-                    className={`w-full h-full object-cover ${cameraFacing === 'user' ? 'scale-x-[-1]' : ''}`}
+                    playsInline 
+                    muted 
+                    className="w-full h-full object-cover"
                   />
-
-                  {/* Connecting / Loading Spinner Overlay if camera stream initializing */}
-                  {isCameraConnecting && (
-                    <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-2.5 z-20">
-                      <RefreshCw className="w-7 h-7 text-[#6DB677] animate-spin" />
-                      <p className="text-xs font-bold text-white">Menghubungkan Kamera...</p>
-                      <p className="text-[10px] text-white/60">Mohon izinkan akses kamera di browser</p>
-                    </div>
-                  )}
-
-                  {/* Animated Scanner Laser Overlay */}
-                  <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-3.5">
-                    {/* Corner Guides */}
-                    <div className="flex justify-between">
-                      <div className="w-5 h-5 border-t-2 border-l-2 border-[#6DB677] rounded-tl-lg" />
-                      <div className="w-5 h-5 border-t-2 border-r-2 border-[#6DB677] rounded-tr-lg" />
-                    </div>
-
-                    {/* Scanning Bar Animation */}
-                    <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-[#6DB677] to-transparent shadow-[0_0_8px_#6DB677] animate-pulse my-auto" />
-
-                    <div className="flex justify-between items-end">
-                      <div className="w-5 h-5 border-b-2 border-l-2 border-[#6DB677] rounded-bl-lg" />
-                      <span className="text-[9px] sm:text-[10px] font-bold text-white bg-black/60 px-2 py-0.5 rounded-full backdrop-blur-sm">
-                        {aspectRatio} • {cameraFacing === 'environment' ? 'Belakang' : 'Depan'}
+                  {/* Scanner Grid Overlay */}
+                  <div className="absolute inset-0 pointer-events-none border-[16px] border-black/20 rounded-3xl flex items-center justify-center">
+                    <div className="w-48 h-48 sm:w-64 sm:h-64 border-2 border-dashed border-white/70 rounded-2xl animate-pulse flex items-center justify-center">
+                      <span className="text-[11px] font-bold text-white bg-black/40 px-2.5 py-1 rounded-full backdrop-blur-sm">
+                        Posisikan Sampah di Sini
                       </span>
-                      <div className="w-5 h-5 border-b-2 border-r-2 border-[#6DB677] rounded-tr-lg" />
                     </div>
                   </div>
 
-                  {/* Top Camera Controls Overlay */}
-                  <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10">
+                  {/* Camera Controls Bar */}
+                  <div className="absolute bottom-4 inset-x-0 flex items-center justify-center gap-4 px-4 z-10">
+                    {hasMultipleCameras && (
+                      <button
+                        type="button"
+                        onClick={toggleCameraFacing}
+                        className="w-11 h-11 rounded-2xl bg-black/40 text-white backdrop-blur-md border border-white/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                        title="Putar Kamera"
+                      >
+                        <SwitchCamera className="w-5 h-5" />
+                      </button>
+                    )}
+
+                    {/* Shutter Capture Button */}
                     <button
                       type="button"
-                      onClick={flipCamera}
-                      title="Ganti Kamera (Depan / Belakang)"
-                      className="p-2 rounded-full bg-black/60 text-white backdrop-blur-md hover:bg-black/80 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+                      onClick={handleCapturePhoto}
+                      className="w-16 h-16 rounded-full bg-white text-[#1A4D3A] shadow-xl border-4 border-[#357A59] flex items-center justify-center hover:scale-105 active:scale-90 transition-transform cursor-pointer"
+                      title="Ambil Foto"
                     >
-                      <SwitchCamera className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-bold pr-0.5 hidden sm:inline">
-                        {cameraFacing === 'environment' ? 'Ke Depan' : 'Ke Belakang'}
-                      </span>
+                      <div className="w-11 h-11 rounded-full bg-[#357A59] flex items-center justify-center text-white">
+                        <Camera className="w-5 h-5" />
+                      </div>
                     </button>
 
                     <button
                       type="button"
                       onClick={stopCamera}
+                      className="w-11 h-11 rounded-2xl bg-black/40 text-white backdrop-blur-md border border-white/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer"
                       title="Tutup Kamera"
-                      className="p-2 rounded-full bg-black/60 text-white backdrop-blur-md hover:bg-black/80 hover:scale-105 active:scale-95 transition-all cursor-pointer"
                     >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Bottom Snapshot Button Bar */}
-                  <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-3 z-10 px-3">
-                    <button
-                      type="button"
-                      onClick={capturePhoto}
-                      id="btn-capture-camera"
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-earth text-white font-bold text-xs shadow-clay-green hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                    >
-                      <div className="w-3 h-3 rounded-full bg-[#FF9E20] animate-ping" />
-                      <Camera className="w-4 h-4" />
-                      <span>Ambil Foto ({aspectRatio})</span>
+                      <X className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
-              </div>
-            ) : selectedImage ? (
-              /* IMAGE PREVIEW AFTER CAPTURE / UPLOAD */
-              <div className="space-y-3">
-                <div className="relative w-full h-48 rounded-2xl overflow-hidden shadow-clay-card border border-white bg-[#EAE5DC]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+              )}
+
+              {/* State B: Photo Selected / Captured Preview */}
+              {!isCameraActive && selectedImage && (
+                <div className="relative w-full h-full group">
                   <img 
                     src={selectedImage} 
-                    alt="Barang yang diupload / difoto" 
+                    alt="Preview Sampah" 
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-2.5 left-2.5 bg-[#FAF8F5]/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-extrabold text-[#357A59] shadow-sm flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#357A59]" />
-                    <span>Foto Siap Dianalisis AI</span>
+                  <div className="absolute top-3 right-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedImage(null)}
+                      className="p-2 rounded-xl bg-black/50 text-white backdrop-blur-md hover:bg-black/70 active:scale-95 transition-all cursor-pointer"
+                      title="Hapus Foto"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="absolute bottom-3 left-3 bg-[#FAF8F5]/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-bold text-[#1A4D3A] shadow-sm flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-[#357A59]" />
+                    <span>Foto Siap Dianalisis</span>
                   </div>
                 </div>
+              )}
 
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => startCamera('environment')}
-                    className="flex-1 py-2 px-3 rounded-xl bg-[#FAF8F5] border border-white text-xs font-bold text-[#1A4D3A] shadow-clay-button hover:bg-[#EDE8E0] flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Camera className="w-3.5 h-3.5 text-[#357A59]" />
-                    <span>Foto Ulang Kamera</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex-1 py-2 px-3 rounded-xl bg-[#FAF8F5] border border-white text-xs font-bold text-[#1A4D3A] shadow-clay-button hover:bg-[#EDE8E0] flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Upload className="w-3.5 h-3.5 text-[#357A59]" />
-                    <span>Ganti File</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* DEFAULT CHOOSE CAMERA OR UPLOAD PANEL */
-              <div className="space-y-3">
-                {/* Pre-camera Aspect Ratio Selector */}
-                <div className="flex items-center justify-between p-2.5 bg-[#FAF8F5] rounded-2xl border border-white shadow-clay-sm">
-                  <span className="text-[11px] font-extrabold text-[#1A4D3A] flex items-center gap-1.5 pl-1">
-                    <Maximize2 className="w-3.5 h-3.5 text-[#357A59]" />
-                    <span>Rasio Kamera:</span>
-                  </span>
-                  <div className="flex items-center gap-1 bg-[#EAE5DC]/60 p-1 rounded-xl">
-                    {(['1:1', '4:3', '16:9', '9:16'] as CameraAspectRatio[]).map((ratio) => (
-                      <button
-                        key={ratio}
-                        type="button"
-                        onClick={() => setAspectRatio(ratio)}
-                        className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
-                          aspectRatio === ratio
-                            ? 'bg-[#357A59] text-white shadow-clay-green'
-                            : 'text-[#1A4D3A]/70 hover:text-[#1A4D3A] hover:bg-white/50'
-                        }`}
-                      >
-                        {ratio}
-                      </button>
-                    ))}
+              {/* State C: Empty Placeholder Viewfinder */}
+              {!isCameraActive && !selectedImage && (
+                <div className="p-6 text-center space-y-4 max-w-sm">
+                  <div className="w-16 h-16 mx-auto rounded-3xl bg-[#FAF8F5] shadow-clay-card flex items-center justify-center text-[#357A59]">
+                    <Camera className="w-8 h-8" />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Option A1: Buka Kamera Belakang (Utama / Mobile Environment) */}
-                  <button
-                    type="button"
-                    id="btn-open-camera-back"
-                    onClick={() => startCamera('environment')}
-                    className="p-4 rounded-2xl bg-[#EBF4EE] border-2 border-[#6DB677]/40 text-center hover:bg-[#DDF0E2] transition-all group flex flex-col items-center justify-center gap-2 shadow-clay-button cursor-pointer"
-                  >
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-earth text-white flex items-center justify-center shadow-clay-green group-hover:scale-110 transition-transform">
-                      <Camera className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-extrabold text-[#1A4D3A]">
-                        Kamera Belakang
-                      </p>
-                      <p className="text-[10px] text-[#357A59] font-semibold">
-                        Scan Objek ({aspectRatio})
-                      </p>
-                    </div>
-                  </button>
-
-                  {/* Option A2: Buka Kamera Depan (Selfie / Mobile User) */}
-                  <button
-                    type="button"
-                    id="btn-open-camera-front"
-                    onClick={() => startCamera('user')}
-                    className="p-4 rounded-2xl bg-[#EBF4EE] border-2 border-[#6DB677]/40 text-center hover:bg-[#DDF0E2] transition-all group flex flex-col items-center justify-center gap-2 shadow-clay-button cursor-pointer"
-                  >
-                    <div className="w-10 h-10 rounded-2xl bg-[#FAF8F5] text-[#357A59] flex items-center justify-center shadow-clay-button group-hover:scale-110 transition-transform">
-                      <Smartphone className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-extrabold text-[#1A4D3A]">
-                        Kamera Depan
-                      </p>
-                      <p className="text-[10px] text-[#357A59] font-semibold">
-                        Mode Selfie ({aspectRatio})
-                      </p>
-                    </div>
-                  </button>
-                </div>
-
-                {/* Option B: Upload File Gambar */}
-                <button
-                  type="button"
-                  id="btn-upload-file"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full p-3 rounded-2xl bg-[#FAF8F5] border-2 border-dashed border-[#1A4D3A]/20 text-center hover:bg-[#EAE5DC] transition-all group flex items-center justify-center gap-3 shadow-clay-card cursor-pointer"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-[#FAF8F5] text-[#357A59] flex items-center justify-center shadow-clay-button group-hover:scale-110 transition-transform flex-shrink-0">
-                    <Upload className="w-4 h-4" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs font-extrabold text-[#1A4D3A]">
-                      Atau Upload Gambar dari Galeri
-                    </p>
-                    <p className="text-[10px] text-[#1A4D3A]/60 font-semibold">
-                      Format PNG, JPG, WebP (Maksimal 5MB)
+                  <div>
+                    <h3 className="text-base font-bold text-[#1A4D3A]">
+                      Buka Kamera atau Unggah Foto
+                    </h3>
+                    <p className="text-xs text-[#1A4D3A]/70 mt-1">
+                      Arahkan lensa ke botol, kardus, jeans, atau kemasan sampah yang ingin kamu upcycle.
                     </p>
                   </div>
-                </button>
 
-                {cameraError && (
-                  <div className="p-3 rounded-xl bg-[#FDE8E8] border border-[#DC2626]/30 text-[#DC2626] text-xs font-medium flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <span>{cameraError}</span>
+                  <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => startCamera('environment')}
+                      disabled={isCameraConnecting}
+                      className="px-4 py-2.5 rounded-2xl bg-[#357A59] text-white shadow-clay-btn font-bold text-xs flex items-center gap-2 hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>{isCameraConnecting ? 'Menghubungkan...' : 'Buka Kamera'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-4 py-2.5 rounded-2xl bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-card font-bold text-xs flex items-center gap-2 border border-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Upload className="w-4 h-4 text-[#357A59]" />
+                      <span>Pilih File Foto</span>
+                    </button>
                   </div>
-                )}
-              </div>
-            )}
 
-            {/* Quick Sample Selector */}
-            <div className="space-y-2 pt-1">
-              <label className="block text-xs font-extrabold text-[#1A4D3A] uppercase tracking-wider">
-                Atau Pilih Sampel Sampah Populer:
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {SAMPLE_TRASH_ITEMS.slice(0, 4).map((item, idx) => (
+                  {cameraError && (
+                    <p className="text-[11px] text-red-600 bg-red-50 p-2 rounded-xl border border-red-200 mt-2">
+                      {cameraError}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Quick Sample Image Picker */}
+            <div className="bg-[#FAF8F5] p-3.5 rounded-2xl shadow-clay-card border border-white space-y-2">
+              <span className="text-[11px] font-bold text-[#1A4D3A]/70 flex items-center gap-1.5 uppercase tracking-wide">
+                <Zap className="w-3.5 h-3.5 text-[#FF9E20]" />
+                Coba Contoh Foto Sampah Instan:
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {SAMPLE_DEMO_ITEMS.map((item, idx) => (
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => handleSelectSample(item)}
-                    className={`p-2.5 rounded-xl text-left border transition-all text-xs font-semibold flex items-center justify-between ${
-                      prompt === item.samplePrompt
-                        ? 'bg-[#E8F2ED] border-[#357A59] text-[#1A4D3A] shadow-clay-sm'
-                        : 'bg-[#FAF8F5] border-white/80 text-[#1A4D3A]/80 hover:bg-[#EDE8E0]'
-                    }`}
+                    onClick={() => handleSelectDemoItem(item)}
+                    className="flex items-center gap-2 p-2 rounded-xl bg-white border border-[#1A4D3A]/10 hover:border-[#357A59] hover:bg-[#E8F2ED]/50 transition-all text-left cursor-pointer group"
                   >
-                    <span className="truncate">{item.name}</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-[#357A59] flex-shrink-0" />
+                    <span className="text-xl shrink-0 group-hover:scale-110 transition-transform">
+                      {item.icon}
+                    </span>
+                    <span className="text-xs font-semibold text-[#1A4D3A] line-clamp-1">
+                      {item.name}
+                    </span>
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Right Column: Prompt & Skill Level */}
-          <div className="lg:col-span-7 space-y-5 flex flex-col justify-between">
+          {/* Right Area: Creative Intent & Analysis Trigger (5 Cols) */}
+          <div className="lg:col-span-5 flex flex-col justify-between space-y-5 bg-[#FAF8F5] p-5 sm:p-6 rounded-3xl shadow-clay-card border border-white">
             <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-extrabold text-[#1A4D3A] uppercase tracking-wider">
-                    {selectedImage ? '2. Mau Dibuat Jadi Barang Apa? (Opsional)' : '2. Mau Dibuat Jadi Apa? / Jelaskan Ide'}
-                  </label>
-                  {selectedImage && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/30">
-                      📸 Foto Siap Dideteksi Otomatis
-                    </span>
-                  )}
-                </div>
-
-                {selectedImage && (
-                  <p className="text-[11px] text-[#357A59] font-semibold mb-2 bg-[#EBF4EE] p-2.5 rounded-xl border border-[#6DB677]/30 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[#357A59] flex-shrink-0" />
-                    <span>
-                      AI akan otomatis mengenali jenis sampah dari foto. Cukup ketik barang yang ingin dibuat, atau pilih chip di bawah.
-                    </span>
-                  </p>
-                )}
-
-                <textarea
-                  id="scanner-prompt-input"
-                  rows={3}
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder={
-                    selectedImage
-                      ? 'Contoh: "Ingin jadi tas selempang kecil", "Jadikan pot tanaman estetik", "Bikin organizer meja kost", atau biarkan kosong untuk rekomendasi AI terbaik dari fotomu.'
-                      : 'Contoh: "Ingin buat tas selempang dari celana jeans bekas robek", "Bikin pot siram otomatis dari botol plastik", dll.'
-                  }
-                  className="w-full p-4 rounded-2xl bg-[#FAF8F5] shadow-clay-inset border border-white text-sm text-[#1A4D3A] placeholder-[#1A4D3A]/40 focus:outline-none focus:ring-2 focus:ring-[#357A59]"
-                />
-
-                {/* Quick Goal Intent Chips */}
-                <div className="mt-2.5 space-y-1.5">
-                  <span className="text-[10px] font-bold text-[#1A4D3A]/70 uppercase tracking-wider">
-                    Ide Cepat Kreasi:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { label: '✨ Rekomendasi AI Terbaik', value: '' },
-                      { label: '👜 Tas / Pouch Selempang', value: 'Ingin dijadikan tas selempang / pouch gadget estetik' },
-                      { label: '🪴 Pot & Dekorasi Kamar', value: 'Ingin dijadikan pot tanaman estetik / dekorasi meja kamar kost' },
-                      { label: '📦 Organizer Meja Belajar', value: 'Ingin dijadikan organizer alat tulis dan holder handphone' },
-                      { label: '💡 Case & Dudukan Gadget', value: 'Ingin dijadikan dudukan handphone / pelindung kabel charger' },
-                    ].map((chip, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setPrompt(chip.value)}
-                        className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
-                          prompt === chip.value
-                            ? 'bg-[#357A59] text-white border-[#357A59] shadow-clay-green'
-                            : 'bg-[#FAF8F5] border-white text-[#1A4D3A]/80 shadow-clay-button hover:bg-[#EDE8E0]'
-                        }`}
-                      >
-                        {chip.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#357A59] uppercase tracking-wider flex items-center gap-1.5">
+                  <Lightbulb className="w-4 h-4 text-[#FF9E20]" />
+                  Langkah 2: Niat Kreatif (Opsional)
+                </span>
+                <span className="text-[11px] text-[#1A4D3A]/50 font-medium">Bisa Dikosongkan</span>
               </div>
 
-              {/* Skill Level Selector */}
               <div>
-                <label className="block text-xs font-extrabold text-[#1A4D3A] uppercase tracking-wider mb-2">
-                  3. Pilih Tingkat Kemahiran DIY
+                <label className="block text-sm font-bold text-[#1A4D3A] mb-1.5">
+                  Mau dibikin apa?
                 </label>
-                <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSkillLevel('Beginner')}
-                    className={`p-3 rounded-2xl text-center border transition-all ${
-                      skillLevel === 'Beginner'
-                        ? 'bg-[#357A59] text-white shadow-clay-green font-bold'
-                        : 'bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-button border-white font-medium hover:bg-[#EDE8E0]'
-                    }`}
-                  >
-                    <p className="text-xs sm:text-sm font-bold">🟢 Pemula</p>
-                    <p className="text-[10px] opacity-80 mt-0.5">Tanpa jahit, 5-15m</p>
-                  </button>
+                <textarea
+                  value={userPrompt}
+                  onChange={(e) => setUserPrompt(e.target.value)}
+                  placeholder="Contoh: Pot tanaman gantung self-watering, dompet kartu, rak organizer meja belajar..."
+                  rows={3}
+                  className="w-full p-3.5 rounded-2xl bg-[#F5F2ED]/80 shadow-clay-inset border border-[#1A4D3A]/10 text-sm text-[#1A4D3A] placeholder-[#1A4D3A]/40 focus:outline-none focus:ring-2 focus:ring-[#357A59]/40 resize-none font-medium"
+                />
+              </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setSkillLevel('Crafty')}
-                    className={`p-3 rounded-2xl text-center border transition-all ${
-                      skillLevel === 'Crafty'
-                        ? 'bg-[#357A59] text-white shadow-clay-green font-bold'
-                        : 'bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-button border-white font-medium hover:bg-[#EDE8E0]'
-                    }`}
-                  >
-                    <p className="text-xs sm:text-sm font-bold">🟡 Kreatif</p>
-                    <p className="text-[10px] opacity-80 mt-0.5">Jahit tangan/lem</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSkillLevel('Pro Maker')}
-                    className={`p-3 rounded-2xl text-center border transition-all ${
-                      skillLevel === 'Pro Maker'
-                        ? 'bg-[#357A59] text-white shadow-clay-green font-bold'
-                        : 'bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-button border-white font-medium hover:bg-[#EDE8E0]'
-                    }`}
-                  >
-                    <p className="text-xs sm:text-sm font-bold">🔴 Pro Maker</p>
-                    <p className="text-[10px] opacity-80 mt-0.5">Mesin/Alat lengkap</p>
-                  </button>
+              {/* Quick suggestion chips */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-[#1A4D3A]/60">
+                  Ide Cepat:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {SUGGESTION_CHIPS.map((chip, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setUserPrompt(chip.replace(/^[^\s]+\s/, ''))}
+                      className="text-xs font-semibold px-2.5 py-1 rounded-full bg-white border border-[#1A4D3A]/10 hover:border-[#357A59] hover:bg-[#E8F2ED] text-[#1A4D3A] transition-all cursor-pointer active:scale-95"
+                    >
+                      {chip}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* Error Display */}
-            {error && (
-              <div className="p-3.5 rounded-2xl bg-[#FDE8E8] border border-[#DC2626]/30 text-[#DC2626] text-xs font-semibold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
             {/* Action Trigger Button */}
-            <button
-              id="btn-generate-upcycle"
-              type="button"
-              disabled={isLoading}
-              onClick={handleGenerate}
-              className="w-full py-4 rounded-full bg-gradient-earth text-white font-bold text-base shadow-clay-green hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {isLoading ? (
-                <>
-                  <RefreshCw className="w-5 h-5 animate-spin text-[#FF9E20]" />
-                  <span>Gemini AI Sedang Menganalisis Sampah Secara Mendalam ({scanProgress}%)...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5 text-[#FF9E20] fill-[#FF9E20]" />
-                  <span>
-                    {selectedImage
-                      ? 'Analisis Foto & Rancang Blueprint Upcycle'
-                      : 'Generate Blueprint Upcycle dengan Gemini AI'}
-                  </span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* AI Vision Deep Scanning Radar / Inspection HUD (Active during isLoading) */}
-      {isLoading && (
-        <div className="bg-[#FAF8F5] rounded-[32px] p-6 sm:p-8 shadow-clay-card border-2 border-[#357A59]/30 space-y-6 animate-in fade-in zoom-in-95 duration-300">
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            {/* Scanned Photo Preview with Radar / Laser Scanline */}
-            {selectedImage ? (
-              <div className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-2xl overflow-hidden shadow-clay-card border-2 border-[#357A59] flex-shrink-0 bg-black">
-                <img
-                  src={selectedImage}
-                  alt="Scanned Object"
-                  className="w-full h-full object-cover opacity-80"
-                />
-                {/* Laser scan line */}
-                <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#FF9E20] to-transparent shadow-[0_0_12px_#FF9E20] animate-bounce" />
-                {/* HUD Corner Targets */}
-                <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-[#357A59]" />
-                <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-[#357A59]" />
-                <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-[#357A59]" />
-                <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-[#357A59]" />
-                {/* Live Pulse Label */}
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/70 text-[#FF9E20] text-[9px] font-black uppercase tracking-widest backdrop-blur-sm">
-                  LIVE AI VISION
-                </div>
-              </div>
-            ) : (
-              <div className="w-24 h-24 rounded-2xl bg-[#E8F2ED] border border-[#357A59]/40 flex items-center justify-center flex-shrink-0 text-[#357A59] shadow-clay-sm">
-                <Sparkles className="w-10 h-10 animate-spin text-[#357A59]" />
-              </div>
-            )}
-
-            {/* Stage Progress & Detail */}
-            <div className="flex-1 w-full space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-[#357A59] flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#357A59] animate-ping inline-block" />
-                  Pemindaian & Analisis Multi-Tahap
-                </span>
-                <span className="text-sm font-black text-[#1A4D3A] font-mono">
-                  {scanProgress}%
-                </span>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="w-full h-3 bg-[#E8F2ED] rounded-full overflow-hidden p-0.5 border border-[#357A59]/20 shadow-clay-inset">
-                <div
-                  className="h-full bg-gradient-earth rounded-full transition-all duration-300 ease-out"
-                  style={{ width: `${Math.min(100, Math.max(8, scanProgress))}%` }}
-                />
-              </div>
-
-              {/* Current Active Step Text */}
-              <p className="text-sm font-bold text-[#1A4D3A] flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 animate-spin text-[#357A59] flex-shrink-0" />
-                <span>{scanStageText}</span>
+            <div className="pt-4 border-t border-[#1A4D3A]/10 space-y-2">
+              <button
+                type="button"
+                onClick={handleAnalyzeWaste}
+                disabled={!selectedImage}
+                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-earth text-white shadow-clay-button font-bold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
+              >
+                <Sparkles className="w-5 h-5 text-[#FF9E20] animate-spin" style={{ animationDuration: '4s' }} />
+                <span>Analisis Sampah Sekarang</span>
+              </button>
+              <p className="text-[11px] text-center text-[#1A4D3A]/60 font-medium">
+                AI akan mengisolasi objek sampah, mendeteksi polimer, dan menghitung estimasi nilai jual.
               </p>
-
-              {/* 4 Inspection Checkpoints */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
-                {[
-                  { label: 'Deteksi Visual', stage: 1 },
-                  { label: 'Uji Polimer Material', stage: 2 },
-                  { label: 'Struktur & Durabilitas', stage: 3 },
-                  { label: 'Blueprint Presisi', stage: 4 },
-                ].map((item) => {
-                  const isDone = scanStageIndex > item.stage;
-                  const isCurrent = scanStageIndex === item.stage;
-                  return (
-                    <div
-                      key={item.stage}
-                      className={`p-2 rounded-xl text-center text-[10px] font-bold border transition-all ${
-                        isDone
-                          ? 'bg-[#E8F2ED] text-[#357A59] border-[#357A59]/30 shadow-clay-sm'
-                          : isCurrent
-                          ? 'bg-[#357A59] text-white border-[#357A59] shadow-clay-green'
-                          : 'bg-[#FAF8F5] text-[#1A4D3A]/40 border-black/5'
-                      }`}
-                    >
-                      {isDone ? '✓ ' : isCurrent ? '⏳ ' : '• '}
-                      {item.label}
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Generated Upcycle Blueprint Output */}
-      {result && (
-        <div className="bg-[#FAF8F5] rounded-[32px] p-6 sm:p-10 shadow-clay-card border border-white space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* AI Vision Detection Banner */}
-          {result.detectedItemName && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-[#E8F2ED] border border-[#357A59]/30 shadow-clay-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#357A59] text-white flex items-center justify-center flex-shrink-0 shadow-clay-sm">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-[#357A59] uppercase tracking-wider">
-                    Hasil Deteksi AI Vision dari Foto:
-                  </p>
-                  <p className="text-base font-black text-[#1A4D3A]">
-                    {result.detectedItemName}
-                  </p>
-                  {result.detectedCondition && (
-                    <p className="text-xs text-[#357A59]/90 font-semibold mt-0.5">
-                      🔎 Kondisi: {result.detectedCondition}
-                    </p>
-                  )}
-                </div>
+      {/* =========================================================================
+          STAGE 2: AI SCANNING & SEGMENTATION SIMULATION
+      ========================================================================= */}
+      {stage === 'analyzing' && (
+        <div className="bg-[#FAF8F5] p-8 sm:p-12 rounded-3xl shadow-clay-card border border-white text-center space-y-6 max-w-xl mx-auto my-8">
+          <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
+            {/* Animated Radar Pulse */}
+            <div className="absolute inset-0 rounded-full bg-[#6DB677]/20 animate-ping" />
+            <div className="absolute inset-2 rounded-full bg-[#357A59]/30 animate-pulse" />
+            <div className="w-20 h-20 rounded-3xl bg-gradient-earth p-0.5 shadow-clay-green flex items-center justify-center relative z-10">
+              <div className="w-full h-full bg-[#FAF8F5] rounded-[22px] flex items-center justify-center text-[#1A4D3A]">
+                <Sparkles className="w-9 h-9 text-[#357A59] animate-bounce" />
               </div>
-              {result.detectedMaterialType && (
-                <span className="self-start sm:self-auto px-3.5 py-1.5 rounded-full bg-white text-[#1A4D3A] text-xs font-bold border border-[#1A4D3A]/10 shadow-clay-pill">
-                  Material: {result.detectedMaterialType}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Blueprint Header & Detailed Product Breakdown */}
-          <div className="space-y-4 pb-6 border-b border-[#1A4D3A]/10">
-            {/* PDF Success Notification Toast */}
-            {pdfSuccessMessage && (
-              <div className="p-3.5 rounded-2xl bg-[#E8F2ED] border border-[#357A59]/40 text-[#215E61] text-xs font-bold flex items-center justify-between shadow-clay-sm animate-in fade-in slide-in-from-top-2">
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#357A59] flex-shrink-0" />
-                  <span>Panduan DIY Upcycle berhasil disimpan ke PDF! File siap dibuka offline kapan saja.</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setPdfSuccessMessage(false)}
-                  className="text-[11px] text-[#357A59] font-bold hover:underline ml-2"
-                >
-                  Tutup
-                </button>
-              </div>
-            )}
-
-            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-              <div className="space-y-2.5 max-w-2xl">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20 shadow-clay-sm">
-                    ✨ Vibe: {result.vibe}
-                  </span>
-                  <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#FFF5E6] text-[#D97E0D] border border-[#FF9E20]/30 shadow-clay-sm">
-                    ⚡ {result.difficulty}
-                  </span>
-                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-pill">
-                    ⏱️ {result.timeEstimate}
-                  </span>
-
-                  {/* Quick PDF Download Pill Button */}
-                  <button
-                    id="btn-save-as-pdf-top"
-                    type="button"
-                    onClick={handleDownloadPDF}
-                    disabled={isDownloadingPdf}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-[#215E61] hover:bg-[#E8F2ED] hover:text-[#184547] border border-[#357A59]/30 text-xs font-extrabold shadow-clay-button transition-all cursor-pointer"
-                  >
-                    {isDownloadingPdf ? (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#357A59]" />
-                        <span>Membuat PDF...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="w-3.5 h-3.5 text-[#357A59]" />
-                        <span>Simpan sebagai PDF</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1A4D3A]">
-                  {result.projectName}
-                </h3>
-                <p className="text-sm sm:text-base text-[#1A4D3A]/80 font-medium italic">
-                  &ldquo;{result.tagline}&rdquo;
-                </p>
-
-                {/* Clear & Detailed Product Explanation */}
-                {result.productDescription && (
-                  <div className="p-4 rounded-2xl bg-white border border-[#1A4D3A]/10 shadow-clay-sm mt-3 space-y-1">
-                    <p className="text-[11px] font-extrabold text-[#357A59] uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Rincian Barang yang Dibuat & Kegunaannya:</span>
-                    </p>
-                    <p className="text-xs sm:text-sm text-[#1A4D3A]/85 leading-relaxed font-medium">
-                      {result.productDescription}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Impact & Value Badges Matrix */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-2.5 w-full lg:w-56 flex-shrink-0">
-                <div className="bg-[#FAF8F5] p-3.5 rounded-2xl shadow-clay-button border border-white text-center">
-                  <p className="text-[10px] font-bold text-[#1A4D3A]/60 uppercase">Estimasi Nilai Jual</p>
-                  <p className="text-base sm:text-lg font-black text-[#357A59]">
-                    Rp {result.estimatedValueIdr?.toLocaleString('id-ID')}
-                  </p>
-                </div>
-
-                <div className="bg-[#FAF8F5] p-3.5 rounded-2xl shadow-clay-button border border-white text-center">
-                  <p className="text-[10px] font-bold text-[#1A4D3A]/60 uppercase">CO2 Dicegah</p>
-                  <p className="text-base sm:text-lg font-black text-[#1A4D3A]">
-                    {result.co2SavedKg} kg
-                  </p>
-                </div>
-
-                <div className="bg-[#FAF8F5] p-3.5 rounded-2xl shadow-clay-button border border-white text-center col-span-2 sm:col-span-1">
-                  <p className="text-[10px] font-bold text-[#1A4D3A]/60 uppercase">Reward Daun</p>
-                  <p className="text-base sm:text-lg font-black text-[#FF9E20] flex items-center justify-center gap-1">
-                    <span>+{result.pointsRewarded}</span> 🍃
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* 3 Pillars of Tangible Benefits */}
-            {result.benefits && (
-              <div className="mt-4 pt-4 border-t border-[#1A4D3A]/10 space-y-2.5">
-                <h4 className="text-xs font-extrabold text-[#1A4D3A] uppercase tracking-wider flex items-center gap-1.5">
-                  <Leaf className="w-4 h-4 text-[#357A59]" />
-                  <span>Manfaat Nyata Upcycle Ini (3 Pilar):</span>
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="p-3.5 rounded-2xl bg-[#FFF5E6] border border-[#FF9E20]/30 shadow-clay-sm space-y-1">
-                    <p className="text-xs font-black text-[#D97E0D] flex items-center gap-1.5">
-                      <span>💰 Manfaat Finansial</span>
-                    </p>
-                    <p className="text-xs text-[#1A4D3A]/85 leading-relaxed font-medium">
-                      {result.benefits.economic}
-                    </p>
-                  </div>
-
-                  <div className="p-3.5 rounded-2xl bg-[#E8F2ED] border border-[#357A59]/30 shadow-clay-sm space-y-1">
-                    <p className="text-xs font-black text-[#357A59] flex items-center gap-1.5">
-                      <span>🌱 Manfaat Lingkungan</span>
-                    </p>
-                    <p className="text-xs text-[#1A4D3A]/85 leading-relaxed font-medium">
-                      {result.benefits.environmental}
-                    </p>
-                  </div>
-
-                  <div className="p-3.5 rounded-2xl bg-white border border-[#1A4D3A]/15 shadow-clay-sm space-y-1">
-                    <p className="text-xs font-black text-[#1A4D3A] flex items-center gap-1.5">
-                      <span>⚡ Manfaat Praktis Harian</span>
-                    </p>
-                    <p className="text-xs text-[#1A4D3A]/85 leading-relaxed font-medium">
-                      {result.benefits.practical}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Materials & Tools Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Materials Checkable Box */}
-            <div className="bg-[#FAF8F5] p-5 rounded-2xl shadow-clay-card border border-white space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-extrabold text-[#1A4D3A] flex items-center gap-2">
-                  <Leaf className="w-4 h-4 text-[#357A59]" />
-                  <span>Bahan Baku & Sampah yang Diperlukan:</span>
-                </h4>
-                <span className="text-[11px] text-[#357A59] font-bold">
-                  {checkedMaterials.length}/{result.requiredMaterials?.length || 0} Siap
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {result.requiredMaterials?.map((mat, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => toggleMaterialCheck(mat)}
-                    className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all text-xs font-semibold ${
-                      checkedMaterials.includes(mat)
-                        ? 'bg-[#E8F2ED] text-[#1A4D3A] line-through opacity-80'
-                        : 'bg-[#F5F2ED] text-[#1A4D3A] hover:bg-[#EAE5DC]'
-                    }`}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-md border flex items-center justify-center ${
-                        checkedMaterials.includes(mat)
-                          ? 'bg-[#357A59] border-[#357A59] text-white'
-                          : 'border-[#1A4D3A]/30 bg-white'
-                      }`}
-                    >
-                      {checkedMaterials.includes(mat) && <Check className="w-3 h-3" />}
-                    </div>
-                    <span>{mat}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Tools Needed */}
-            <div className="bg-[#FAF8F5] p-5 rounded-2xl shadow-clay-card border border-white space-y-3">
-              <h4 className="text-sm font-extrabold text-[#1A4D3A] flex items-center gap-2">
-                <Wrench className="w-4 h-4 text-[#357A59]" />
-                <span>Peralatan Rumah Tangga:</span>
-              </h4>
-
-              <div className="flex flex-wrap gap-2 pt-1">
-                {result.toolsNeeded?.map((tool, idx) => (
-                  <span
-                    key={idx}
-                    className="px-3 py-1.5 rounded-full bg-[#EBF4EE] border border-[#6DB677]/30 text-xs font-bold text-[#1A4D3A] shadow-clay-sm"
-                  >
-                    🔧 {tool}
-                  </span>
-                ))}
-              </div>
-
-              {result.safetyNote && (
-                <div className="p-3 rounded-xl bg-[#FFF5E6] border border-[#FF9E20]/30 text-[#D97E0D] text-xs font-medium flex items-start gap-2 mt-3">
-                  <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  <span><strong>Safety Tip:</strong> {result.safetyNote}</span>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Step-by-Step Interactive Guide */}
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <h4 className="text-lg font-extrabold text-[#1A4D3A] flex items-center gap-2">
-                <span>Langkah Pengerjaan DIY ({result.steps?.length} Langkah):</span>
-              </h4>
+          <div className="space-y-2">
+            <h3 className="text-xl font-black tracking-tight text-[#1A4D3A]">
+              Gemini Vision Sedang Memindai...
+            </h3>
+            <p className="text-sm font-semibold text-[#357A59] min-h-[24px]">
+              {analyzingStepText}
+            </p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="w-full bg-[#EAE5DC] h-3 rounded-full overflow-hidden shadow-clay-inset p-0.5">
+            <motion.div 
+              className="bg-gradient-earth h-full rounded-full"
+              initial={{ width: '10%' }}
+              animate={{ width: `${analyzingProgress}%` }}
+              transition={{ duration: 0.5 }}
+            />
+          </div>
+
+          <p className="text-xs text-[#1A4D3A]/60 font-medium">
+            Membedakan sampah dari latar belakang (lantai/meja/tangan) dengan koordinat bounding box 2D.
+          </p>
+        </div>
+      )}
+
+      {/* =========================================================================
+          STAGE 3, 4, 5 & 6: RESULTS, VISUAL VERIFICATION, RECOMMENDATIONS & BLUEPRINT
+      ========================================================================= */}
+      {stage === 'results' && analysisResult && (
+        <div className="space-y-8 animate-in fade-in duration-300">
+          {/* ================= SECTION 3: VISUAL VERIFICATION STROKE & AUDIT ================= */}
+          <div className="bg-[#FAF8F5] p-5 sm:p-7 rounded-3xl shadow-clay-card border border-white space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1A4D3A]/10 pb-4">
+              <div>
+                <span className="text-xs font-bold text-[#357A59] uppercase tracking-wider flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-[#357A59]" />
+                  Tahap 3: Visual Verification & Deep Material Audit
+                </span>
+                <h2 className="text-xl sm:text-2xl font-black text-[#1A4D3A] tracking-tight mt-0.5">
+                  Objek Sampah Terisolasi
+                </h2>
+              </div>
+
+              {/* Bounding box toggle */}
               <button
-                id="btn-download-pdf-steps"
                 type="button"
-                onClick={handleDownloadPDF}
-                disabled={isDownloadingPdf}
-                className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white text-[#215E61] hover:bg-[#E8F2ED] border border-[#357A59]/25 text-xs font-extrabold shadow-clay-button transition-all cursor-pointer"
+                onClick={() => setIsOverlayVisible(!isOverlayVisible)}
+                className="flex items-center gap-2 px-3.5 py-1.5 bg-[#F5F2ED] rounded-xl text-xs font-bold text-[#1A4D3A] hover:bg-[#EAE5DC] transition-all cursor-pointer self-start sm:self-auto"
               >
-                {isDownloadingPdf ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#357A59]" />
-                    <span>Menyiapkan Dokumen...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-3.5 h-3.5 text-[#357A59]" />
-                    <span>Unduh Panduan PDF</span>
-                  </>
-                )}
+                {isOverlayVisible ? <Eye className="w-4 h-4 text-[#357A59]" /> : <EyeOff className="w-4 h-4 text-[#1A4D3A]/60" />}
+                <span>{isOverlayVisible ? 'Sembunyikan Bounding Box' : 'Tampilkan Bounding Box'}</span>
               </button>
             </div>
 
-            <div className="space-y-3.5">
-              {result.steps?.map((step) => {
-                const isDone = completedSteps.includes(step.stepNumber);
-                return (
-                  <div
-                    key={step.stepNumber}
-                    onClick={() => toggleStepComplete(step.stepNumber)}
-                    className={`p-5 rounded-2xl border transition-all cursor-pointer ${
-                      isDone
-                        ? 'bg-[#E8F2ED] border-[#357A59]/40 shadow-clay-inset'
-                        : 'bg-[#FAF8F5] border-white shadow-clay-card hover:bg-[#F7F4EE]'
-                    }`}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-extrabold text-xs flex-shrink-0 ${
-                          isDone
-                            ? 'bg-[#357A59] text-white'
-                            : 'bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-button border border-white'
-                        }`}
-                      >
-                        {isDone ? <Check className="w-4 h-4" /> : step.stepNumber}
-                      </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              {/* Image with Visual Verification Bounding Box Overlay (5 Cols) */}
+              <div className="lg:col-span-5">
+                <div className="relative w-full aspect-square sm:aspect-[4/3] rounded-2xl overflow-hidden bg-[#1D2128] shadow-clay-card border-2 border-white group">
+                  {selectedImage && (
+                    <img 
+                      src={selectedImage} 
+                      alt="Identified Object" 
+                      className="w-full h-full object-contain"
+                    />
+                  )}
 
-                      <div className="space-y-1.5 flex-1">
-                        <div className="flex items-center justify-between">
-                          <h5 className={`text-sm sm:text-base font-extrabold text-[#1A4D3A] ${isDone ? 'line-through opacity-75' : ''}`}>
-                            {step.title}
-                          </h5>
-                          <span className="text-[11px] font-bold text-[#357A59] flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            ~{step.timeMinutes} mnt
-                          </span>
+                  {/* Tactile Glowing Bounding Box Overlay */}
+                  {isOverlayVisible && (
+                    <motion.div 
+                      initial={{ scale: 0.95, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="absolute pointer-events-none transition-all duration-300"
+                      style={{
+                        top: `${boxTop}%`,
+                        left: `${boxLeft}%`,
+                        height: `${boxHeight}%`,
+                        width: `${boxWidth}%`,
+                      }}
+                    >
+                      {/* Green glowing border with corner reticles */}
+                      <div className="w-full h-full border-2 sm:border-3 border-[#6DB677] rounded-xl bg-[#6DB677]/15 shadow-[0_0_20px_rgba(109,182,119,0.5)] relative">
+                        {/* Target Reticle Corners */}
+                        <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-white" />
+                        <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-white" />
+                        <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-white" />
+                        <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-white" />
+
+                        {/* Top Identification Badge Pin */}
+                        <div className="absolute -top-7 left-0 bg-[#357A59] text-white text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-lg shadow-md flex items-center gap-1 whitespace-nowrap">
+                          <span className="w-2 h-2 rounded-full bg-[#6DB677] animate-ping" />
+                          <span>{analysisResult.detectedObject.label}</span>
                         </div>
-
-                        <p className={`text-xs sm:text-sm text-[#1A4D3A]/80 leading-relaxed ${isDone ? 'opacity-70' : ''}`}>
-                          {step.instruction}
-                        </p>
-
-                        {step.tip && (
-                          <p className="text-[11px] font-semibold text-[#357A59] bg-[#FAF8F5] p-2 rounded-xl border border-[#357A59]/20 mt-2">
-                            💡 <strong>Gen-Z Pro Tip:</strong> {step.tip}
-                          </p>
-                        )}
                       </div>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+
+              {/* Material Audit Pills & Technical Breakdown (7 Cols) */}
+              <div className="lg:col-span-7 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Pill 1: Jenis & Bahan */}
+                  <div className="bg-[#FAF8F5] p-3.5 rounded-2xl border border-white shadow-clay-sm space-y-1">
+                    <span className="text-[11px] font-bold text-[#1A4D3A]/60 uppercase tracking-wide">
+                      Jenis & Bahan
+                    </span>
+                    <p className="text-sm font-bold text-[#1A4D3A]">
+                      {analysisResult.detectedObject.material}
+                    </p>
+                  </div>
+
+                  {/* Pill 2: Kondisi Fisik */}
+                  <div className="bg-[#FAF8F5] p-3.5 rounded-2xl border border-white shadow-clay-sm space-y-1">
+                    <span className="text-[11px] font-bold text-[#1A4D3A]/60 uppercase tracking-wide">
+                      Kondisi Fisik
+                    </span>
+                    <p className="text-sm font-bold text-[#1A4D3A]">
+                      {analysisResult.detectedObject.condition}
+                    </p>
+                  </div>
+
+                  {/* Pill 3: Estimasi Ukuran */}
+                  <div className="bg-[#FAF8F5] p-3.5 rounded-2xl border border-white shadow-clay-sm space-y-1">
+                    <span className="text-[11px] font-bold text-[#1A4D3A]/60 uppercase tracking-wide">
+                      Estimasi Dimensi
+                    </span>
+                    <p className="text-sm font-bold text-[#1A4D3A]">
+                      {analysisResult.detectedObject.dimension || 'Ukuran standar rumah tangga'}
+                    </p>
+                  </div>
+
+                  {/* Pill 4: Nilai Rongsok Asal */}
+                  <div className="bg-[#FAF8F5] p-3.5 rounded-2xl border border-white shadow-clay-sm space-y-1">
+                    <span className="text-[11px] font-bold text-[#1A4D3A]/60 uppercase tracking-wide">
+                      Nilai Rongsok Asal
+                    </span>
+                    <p className="text-sm font-bold text-[#FF9E20]">
+                      {analysisResult.detectedObject.estimatedScrapValue || 'Rp 200 - Rp 500'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-[#E8F2ED] p-3.5 rounded-2xl border border-[#357A59]/20 flex items-center justify-between text-xs text-[#1A4D3A]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🌿</span>
+                    <div>
+                      <span className="font-bold">Potensi Upcycling Ekologis:</span>
+                      <p className="text-[#1A4D3A]/70 text-[11px]">
+                        Limbah ini berpotensi dinaikkan nilainya hingga <strong className="text-[#357A59]">50x lipat</strong> menjadi produk fungsional siap jual.
+                      </p>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ================= SECTION 4 & 5: 3 CURATED UPCYCLE RECOMMENDATIONS ================= */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-[#357A59] uppercase tracking-wider flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-[#357A59]" />
+                  Tahap 4 & 5: Pilih 1 dari 3 Rekomendasi Kreasi
+                </span>
+                <h2 className="text-xl sm:text-2xl font-black text-[#1A4D3A] tracking-tight">
+                  Katalog Ide Produk Upcycle
+                </h2>
+              </div>
+              <span className="text-xs text-[#1A4D3A]/60 hidden sm:inline font-medium">
+                Pilih kartu untuk melihat panduan langkah demi langkah
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {analysisResult.recommendations.map((rec, index) => {
+                const isSelected = rec.id === selectedRecId;
+
+                const difficultyColor = 
+                  rec.difficulty.toLowerCase().includes('mudah') ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
+                  rec.difficulty.toLowerCase().includes('sedang') ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                  'bg-orange-100 text-orange-800 border-orange-300';
+
+                return (
+                  <motion.div
+                    key={rec.id}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      setSelectedRecId(rec.id);
+                      setCompletedSteps([]);
+                    }}
+                    className={`relative p-5 rounded-3xl cursor-pointer transition-all border-2 flex flex-col justify-between ${
+                      isSelected
+                        ? 'bg-[#FAF8F5] border-[#357A59] shadow-clay-card ring-2 ring-[#357A59]/20'
+                        : 'bg-[#FAF8F5]/80 border-white hover:border-[#357A59]/40 shadow-clay-sm hover:scale-[1.01]'
+                    }`}
+                  >
+                    {/* Selected Checkmark Badge */}
+                    {isSelected && (
+                      <div className="absolute top-4 right-4 w-7 h-7 rounded-full bg-[#357A59] text-white flex items-center justify-center shadow-md">
+                        <Check className="w-4 h-4" />
+                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                      {/* Badge Cluster */}
+                      <div className="flex items-center gap-2 pr-8">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${difficultyColor}`}>
+                          {rec.difficulty}
+                        </span>
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-[#1A4D3A]/70">
+                          <Clock className="w-3 h-3 text-[#357A59]" />
+                          {rec.estimatedTime}
+                        </span>
+                      </div>
+
+                      <h3 className="text-base font-extrabold text-[#1A4D3A] tracking-tight leading-snug">
+                        {rec.title}
+                      </h3>
+
+                      <p className="text-xs text-[#1A4D3A]/70 line-clamp-3 leading-relaxed">
+                        {rec.summary}
+                      </p>
+                    </div>
+
+                    <div className="pt-4 mt-4 border-t border-[#1A4D3A]/10 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-[#1A4D3A]/60 uppercase font-bold block">
+                          Harga Jual Pasar:
+                        </span>
+                        <span className="text-sm font-black text-[#357A59]">
+                          {rec.benchmarkPrice}
+                        </span>
+                      </div>
+
+                      <span className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-colors ${
+                        isSelected 
+                          ? 'bg-[#357A59] text-white' 
+                          : 'bg-[#EAE5DC] text-[#1A4D3A] group-hover:bg-[#357A59] group-hover:text-white'
+                      }`}>
+                        {isSelected ? 'Terpilih ✓' : 'Pilih Ini'}
+                      </span>
+                    </div>
+                  </motion.div>
                 );
               })}
             </div>
           </div>
 
-          {/* Styling Tips & Gen Z Presentation */}
-          {result.stylingTips && (
-            <div className="p-5 rounded-2xl bg-gradient-to-r from-[#EBF4EE] to-[#FFF5E6] border border-[#6DB677]/30 space-y-1.5 shadow-clay-sm">
-              <h5 className="text-xs font-extrabold text-[#1A4D3A] uppercase tracking-wider">
-                🎨 Tips Styling & Estetika Gen-Z:
-              </h5>
-              <p className="text-xs sm:text-sm text-[#1A4D3A]/85 leading-relaxed font-medium">
-                {result.stylingTips}
-              </p>
+          {/* ================= SECTION 6: INSTANT DETAILED BLUEPRINT GENERATION ================= */}
+          {activeRec && (
+            <div className="bg-[#FAF8F5] p-6 sm:p-8 rounded-3xl shadow-clay-card border border-white space-y-7 animate-in fade-in duration-300">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1A4D3A]/10 pb-5">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-3 py-0.5 rounded-full text-xs font-black bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20">
+                      BLUEPRINT AKTIF
+                    </span>
+                    <span className="text-xs font-bold text-[#1A4D3A]/60">
+                      Tingkat: {activeRec.difficulty} • {activeRec.estimatedTime}
+                    </span>
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-black text-[#1A4D3A] tracking-tight">
+                    {activeRec.title}
+                  </h2>
+                </div>
+
+                <div className="flex items-center gap-2 self-start md:self-auto">
+                  {/* Download PDF button */}
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    disabled={isDownloadingPdf}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white shadow-clay-button border border-white text-xs font-bold text-[#1A4D3A] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    title="Unduh Panduan PDF"
+                  >
+                    <Download className="w-4 h-4 text-[#357A59]" />
+                    <span>{isDownloadingPdf ? 'Membuat PDF...' : 'Unduh PDF'}</span>
+                  </button>
+
+                  {/* Share button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShareTitle(activeRec.title);
+                      setShareStory(`Saya baru saja merancang "${activeRec.title}" dari limbah ${analysisResult.detectedObject.label} menggunakan AI Scanner BumiKita!`);
+                      setIsShareModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white shadow-clay-button border border-white text-xs font-bold text-[#1A4D3A] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    title="Bagikan ke Komunitas"
+                  >
+                    <Share2 className="w-4 h-4 text-[#FF9E20]" />
+                    <span>Bagikan</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 1. Auxiliary Cost & Materials Checklist */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <div className="md:col-span-5 bg-gradient-clay p-5 rounded-2xl border border-white shadow-clay-sm space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-[#1A4D3A] flex items-center gap-1.5">
+                      <Wrench className="w-4 h-4 text-[#357A59]" />
+                      Alat & Bahan Tambahan
+                    </h4>
+                    {activeRec.auxiliaryCost && (
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                        Biaya: {activeRec.auxiliaryCost}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-[#1A4D3A]/70">
+                    Centang bahan yang sudah kamu miliki di rumah untuk memastikan kesiapan:
+                  </p>
+
+                  <div className="space-y-2">
+                    {activeRec.materialsNeeded.map((mat, idx) => {
+                      const isChecked = checkedMaterials.includes(mat);
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => handleToggleMaterial(mat)}
+                          className={`flex items-start gap-2.5 p-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                            isChecked
+                              ? 'bg-[#E8F2ED] text-[#1A4D3A] line-through opacity-80'
+                              : 'bg-white/80 text-[#1A4D3A] hover:bg-white'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 mt-0.5 ${
+                            isChecked ? 'bg-[#357A59] border-[#357A59] text-white' : 'border-[#1A4D3A]/30 bg-white'
+                          }`}>
+                            {isChecked && <Check className="w-3 h-3" />}
+                          </div>
+                          <span className="leading-tight">{mat}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Step-by-Step Execution Guide */}
+                <div className="md:col-span-7 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-[#1A4D3A] flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-[#357A59]" />
+                      Langkah Pembuatan ({completedSteps.length}/{activeRec.steps.length} Selesai)
+                    </h4>
+                    <span className="text-xs font-bold text-[#357A59]">
+                      {Math.round((completedSteps.length / activeRec.steps.length) * 100)}% Progres
+                    </span>
+                  </div>
+
+                  {/* Step Progress Bar */}
+                  <div className="w-full bg-[#EAE5DC] h-2 rounded-full overflow-hidden shadow-clay-inset">
+                    <div 
+                      className="bg-gradient-earth h-full transition-all duration-300"
+                      style={{ width: `${(completedSteps.length / activeRec.steps.length) * 100}%` }}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    {activeRec.steps.map((stepInstruction, sIdx) => {
+                      const isDone = completedSteps.includes(sIdx);
+                      return (
+                        <div 
+                          key={sIdx}
+                          onClick={() => handleToggleStep(sIdx)}
+                          className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3.5 ${
+                            isDone 
+                              ? 'bg-[#E8F2ED]/60 border-[#357A59]/30 text-[#1A4D3A]/70' 
+                              : 'bg-white border-[#1A4D3A]/10 hover:border-[#357A59]/40 shadow-clay-sm'
+                          }`}
+                        >
+                          <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
+                            isDone ? 'bg-[#357A59] text-white' : 'bg-[#EAE5DC] text-[#1A4D3A]'
+                          }`}>
+                            {isDone ? <Check className="w-4 h-4" /> : sIdx + 1}
+                          </div>
+
+                          <div className="flex-1 space-y-1">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#357A59] block">
+                              Langkah {sIdx + 1}
+                            </span>
+                            <p className={`text-sm leading-relaxed ${isDone ? 'line-through' : 'font-medium text-[#1A4D3A]'}`}>
+                              {stepInstruction}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Finishing & Green Market Advice */}
+              {activeRec.finishingTips && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/80 border border-amber-200/80 flex items-start gap-3.5 text-xs text-[#1A4D3A]">
+                  <Lightbulb className="w-5 h-5 text-[#FF9E20] shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <strong className="font-bold text-amber-950 block text-sm">
+                      Tips Finishing & Daya Tarik Pasar (Green Market BumiKita):
+                    </strong>
+                    <p className="leading-relaxed text-amber-900/90 font-medium">
+                      {activeRec.finishingTips}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 4. Bottom Reward & Completion Strip */}
+              <div className="pt-5 border-t border-[#1A4D3A]/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-10 h-10 rounded-2xl bg-[#E8F2ED] text-[#357A59] flex items-center justify-center text-xl shrink-0">
+                    🍃
+                  </div>
+                  <div>
+                    <span className="font-bold text-[#1A4D3A] block">
+                      Reward Pembuatan: +60 Daun Points
+                    </span>
+                    <span className="text-xs text-[#1A4D3A]/60">
+                      Tukarkan poin dengan pohon nyata GPS atau diskon market.
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleClaimPoints}
+                  disabled={isClaimed}
+                  className={`px-5 py-2.5 rounded-2xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                    isClaimed
+                      ? 'bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/30 pointer-events-none'
+                      : 'bg-gradient-earth text-white shadow-clay-button hover:scale-105 active:scale-95'
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4 text-[#FF9E20]" />
+                  <span>{isClaimed ? '✓ 60 Daun Telah Diklaim' : 'Klaim Daun Points Sekarang'}</span>
+                </button>
+              </div>
             </div>
           )}
+        </div>
+      )}
 
-          {/* Bottom Claim Action Card */}
-          <div className="p-6 rounded-2xl bg-gradient-earth text-white shadow-clay-green flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <h4 className="text-lg font-black text-white">
-                Selesai Membuat atau Mau Simpan Panduan?
-              </h4>
-              <p className="text-xs text-white/80 font-medium">
-                Unduh PDF untuk digunakan offline di rumah, atau klaim reward +{result.pointsRewarded} Poin Daun!
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-              <button
-                id="btn-download-pdf-bottom"
-                type="button"
-                onClick={handleDownloadPDF}
-                disabled={isDownloadingPdf}
-                className="flex-1 sm:flex-initial px-5 py-3 rounded-full font-extrabold text-xs sm:text-sm bg-white text-[#1A4D3A] hover:bg-[#E8F2ED] shadow-clay-button border border-white transition-all flex items-center justify-center gap-2 cursor-pointer"
+      {/* ================= MODAL: SHARE TO COMMUNITY ================= */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#FAF8F5] max-w-lg w-full rounded-3xl p-6 shadow-2xl border border-white space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-[#1A4D3A]/10 pb-3">
+              <h3 className="text-base font-extrabold text-[#1A4D3A] flex items-center gap-2">
+                <Share2 className="w-4 h-4 text-[#357A59]" />
+                Bagikan Karya ke Komunitas BumiKita
+              </h3>
+              <button 
+                onClick={() => setIsShareModalOpen(false)}
+                className="p-1 rounded-xl text-[#1A4D3A]/60 hover:text-[#1A4D3A]"
               >
-                {isDownloadingPdf ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-[#357A59]" />
-                    <span>Menyiapkan PDF...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4 text-[#357A59]" />
-                    <span>Simpan sebagai PDF</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                id="btn-claim-upcycle-reward"
-                type="button"
-                disabled={isClaimed}
-                onClick={handleClaimPointsAndShare}
-                className={`flex-1 sm:flex-initial px-6 py-3 rounded-full font-extrabold text-xs sm:text-sm shadow-clay-button border border-white transition-all ${
-                  isClaimed
-                    ? 'bg-[#1A4D3A] text-white opacity-80 cursor-default'
-                    : 'bg-[#FF9E20] text-white hover:scale-105 active:scale-95 cursor-pointer shadow-clay-accent'
-                }`}
-              >
-                {isClaimed ? (
-                  <span className="flex items-center justify-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-white" />
-                    Tersimpan & Poin Diklaim!
-                  </span>
-                ) : (
-                  <span className="flex items-center justify-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-white" />
-                    Tandai Selesai & Klaim Daun
-                  </span>
-                )}
+                <X className="w-5 h-5" />
               </button>
             </div>
+
+            {shareSuccess ? (
+              <div className="py-8 text-center space-y-2">
+                <CheckCircle2 className="w-12 h-12 text-[#357A59] mx-auto" />
+                <h4 className="text-base font-bold text-[#1A4D3A]">Berhasil Diposting!</h4>
+                <p className="text-xs text-[#1A4D3A]/70">Karyamu sudah tayang di tab Community feed.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleShareToCommunity} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-[#1A4D3A] mb-1">
+                    Judul Postingan
+                  </label>
+                  <input
+                    type="text"
+                    value={shareTitle}
+                    onChange={(e) => setShareTitle(e.target.value)}
+                    required
+                    className="w-full p-2.5 rounded-xl bg-white border border-[#1A4D3A]/20 text-xs text-[#1A4D3A] font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#1A4D3A] mb-1">
+                    Cerita / Tips Pembuatan
+                  </label>
+                  <textarea
+                    value={shareStory}
+                    onChange={(e) => setShareStory(e.target.value)}
+                    rows={3}
+                    required
+                    className="w-full p-2.5 rounded-xl bg-white border border-[#1A4D3A]/20 text-xs text-[#1A4D3A] font-medium resize-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsShareModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-[#1A4D3A]/70 hover:bg-[#EAE5DC]"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-[#357A59] text-white shadow-clay-btn text-xs font-bold hover:scale-105 active:scale-95 transition-all"
+                  >
+                    Publikasikan
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }

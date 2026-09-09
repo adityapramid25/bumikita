@@ -12,7 +12,8 @@ import {
   MapPin, 
   Users, 
   Gift, 
-  Home
+  Home,
+  User
 } from 'lucide-react';
 
 const NAV_LINKS = [
@@ -42,31 +43,27 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#F5F2ED]/95 backdrop-blur-md border-b border-[#1A4D3A]/10 px-4 sm:px-6 py-3 transition-all">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-        {/* Brand Logo & Tagline */}
+    <header className="sticky top-0 z-40 w-full max-w-full bg-[#F5F2ED]/95 backdrop-blur-md border-b border-[#1A4D3A]/10 px-4 py-3 sm:px-6 sm:py-4 transition-all">
+      <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
+        {/* Left Section (Brand & Logo) */}
         <Link 
           href="/"
-          className="flex items-center gap-3 cursor-pointer group select-none flex-shrink-0"
+          className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group select-none shrink-0"
         >
-          <div className="w-11 h-11 rounded-2xl bg-gradient-earth p-0.5 shadow-clay-green flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+          {/* Logo Container */}
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-earth p-0.5 shadow-clay-green flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95 shrink-0">
             <div className="w-full h-full bg-[#FAF8F5] rounded-[14px] flex items-center justify-center text-[#1A4D3A]">
               <Leaf className="w-6 h-6 text-[#357A59] fill-[#6DB677]/40 animate-pulse" />
             </div>
           </div>
 
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#1A4D3A]">
-                Bumi<span className="text-[#357A59]">Kita</span>
-              </span>
-              <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20">
-                GEN-Z ECO HUB
-              </span>
-            </div>
-            <p className="text-[11px] font-medium text-[#1A4D3A]/60 -mt-0.5 hidden sm:block">
-              Green Market & AI Upcycle Platform
-            </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-lg sm:text-xl font-bold tracking-tight text-[#1A4D3A] shrink-0">
+              Bumi<span className="text-[#357A59]">Kita</span>
+            </span>
+            <span className="hidden md:inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20 shrink-0">
+              GEN-Z ECO HUB
+            </span>
           </div>
         </Link>
 
@@ -97,54 +94,78 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Right Action Icons & Daun Points Pill */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          {/* Daun Points Pill */}
-          <button
-            id="btn-daun-points-rewards"
-            onClick={() => setIsRewardModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-[#FAF8F5] rounded-full shadow-clay-pill border border-white hover:scale-105 active:scale-95 transition-all text-xs font-bold text-[#1A4D3A] cursor-pointer"
-            title="Lihat & Tukar Daun Points"
-          >
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#E8F2ED] text-[#357A59]">
-              🍃
-            </span>
-            <span>{daunPoints}</span>
-            <span className="text-[10px] text-[#357A59] font-extrabold uppercase hidden sm:inline">
-              Daun
-            </span>
-            <Gift className="w-3.5 h-3.5 text-[#FF9E20] ml-0.5" />
-          </button>
+        {/* Right Section (Action Cluster) */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Points Pill ("480") */}
+          <div className="relative group shrink-0">
+            <button
+              id="btn-daun-points-rewards"
+              onClick={() => setIsRewardModalOpen(true)}
+              className="px-3.5 py-1.5 sm:px-4 sm:py-2 text-sm font-semibold rounded-full bg-[#FAF8F5] shadow-clay-card flex items-center gap-1.5 border border-white/80 hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
+              title="Lihat Reward Daun Points"
+            >
+              <span className="flex items-center justify-center w-4 h-4 text-sm shrink-0">
+                🍃
+              </span>
+              <span className="text-sm font-bold text-[#1A4D3A]">{daunPoints}</span>
+              <Gift className="w-4 h-4 text-[#FF9E20] shrink-0" />
+            </button>
 
-          {/* Trees Badge */}
-          <Link 
-            href="/quests"
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-[#EBF4EE] rounded-full text-xs font-bold text-[#1A4D3A] border border-[#6DB677]/30 shadow-clay-sm cursor-pointer hover:bg-[#D8ECD9] transition-all"
-            title="Total Pohon Nyata yang Kamu Tanam"
-          >
-            <TreePine className="w-4 h-4 text-[#357A59]" />
-            <span>{treesPlanted} Pohon</span>
-          </Link>
+            {/* Hover Tooltip */}
+            <div className="absolute top-full right-0 mt-2 hidden group-hover:block z-50 pointer-events-none">
+              <div className="px-3 py-1.5 rounded-xl bg-[#FAF8F5] text-[#1A4D3A] text-[11px] font-bold shadow-clay-card border border-white whitespace-nowrap animate-in fade-in zoom-in-95 duration-200">
+                🎁 Tukar 400 Daun = 1 Pohon Nyata & Diskon Market
+              </div>
+            </div>
+          </div>
 
-          {/* Cart Trigger */}
+          {/* Trees Badge with Smooth Tooltip (Desktop) */}
+          <div className="relative group hidden xl:block shrink-0">
+            <Link 
+              href="/quests"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#EBF4EE] rounded-full text-xs font-bold text-[#1A4D3A] border border-[#6DB677]/30 shadow-clay-sm cursor-pointer hover:bg-[#D8ECD9] hover:scale-105 active:scale-95 transition-all"
+            >
+              <TreePine className="w-4 h-4 text-[#357A59]" />
+              <span>{treesPlanted} Pohon</span>
+            </Link>
+
+            {/* Hover Tooltip */}
+            <div className="absolute top-full right-0 mt-2 hidden group-hover:block z-50 pointer-events-none">
+              <div className="px-3 py-1.5 rounded-xl bg-[#FAF8F5] text-[#1A4D3A] text-[11px] font-bold shadow-clay-card border border-white whitespace-nowrap animate-in fade-in zoom-in-95 duration-200">
+                🌳 2 Pohon ber-GPS aktif di Hutan Kalimantan
+              </div>
+            </div>
+          </div>
+
+          {/* Shopping Bag Button */}
           <button
             id="btn-cart-drawer"
             onClick={() => setIsCartOpen(true)}
-            className="relative flex items-center justify-center w-11 h-11 rounded-2xl bg-[#FAF8F5] shadow-clay-button border border-white text-[#1A4D3A] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center bg-[#FAF8F5] shadow-clay-card border border-white/80 text-[#1A4D3A] hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
             title="Buka Keranjang Belanja"
           >
             <ShoppingBag className="w-5 h-5 text-[#1A4D3A]" />
             {totalCartItems > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#FF9E20] text-white text-[10px] font-black flex items-center justify-center shadow-md animate-bounce">
+              <span className="absolute -top-1 -right-1 w-[18px] h-[18px] sm:w-5 sm:h-5 bg-amber-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
                 {totalCartItems}
               </span>
             )}
           </button>
+
+          {/* User Profile Button */}
+          <Link
+            id="btn-nav-auth"
+            href="/auth"
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center bg-[#357A59] text-white shadow-clay-btn shrink-0 border border-white/60 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            title="Akun Pengguna & Masuk BumiKita"
+          >
+            <User className="w-5 h-5 text-white" />
+          </Link>
         </div>
       </div>
 
       {/* Mobile Sub-Navigation Bar */}
-      <div className="flex lg:hidden overflow-x-auto gap-2 pt-2.5 pb-1 no-scrollbar text-xs">
+      <div className="flex lg:hidden overflow-x-auto gap-1.5 pt-2 pb-0.5 no-scrollbar text-xs w-full">
         {NAV_LINKS.map((link) => {
           const active = isActive(link.href);
           const Icon = link.icon;

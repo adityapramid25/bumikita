@@ -46,6 +46,15 @@ export default function EcoAIAssistant() {
     }
   }, [messages, isOpen]);
 
+  const [showTooltip, setShowTooltip] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowTooltip(false);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleSendMessage = async (textToSend?: string) => {
     const message = textToSend || inputMessage;
     if (!message.trim() || isLoading) return;
@@ -102,12 +111,29 @@ export default function EcoAIAssistant() {
 
   return (
     <>
-      {/* Floating Trigger Button */}
-      <div className="fixed bottom-6 right-6 z-40">
+      {/* Floating Trigger Button & Micro Speech Tooltip */}
+      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end">
+        {/* Speech Tooltip */}
+        {showTooltip && !isOpen && (
+          <div 
+            onClick={() => setShowTooltip(false)}
+            className="mb-2 mr-1 px-3 py-1.5 rounded-2xl bg-[#FAF8F5] text-[#1A4D3A] text-xs font-bold shadow-clay-card border border-white flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300 cursor-pointer"
+          >
+            <span>💬 Punya botol bekas? Yuk scan!</span>
+            <span className="text-[10px] text-[#1A4D3A]/40 hover:text-[#1A4D3A]">✕</span>
+          </div>
+        )}
+
         <button
-          onClick={() => setIsOpen((prev) => !prev)}
+          onClick={() => {
+            setIsOpen((prev) => !prev);
+            setShowTooltip(false);
+          }}
           className="group relative flex items-center gap-2.5 px-4 sm:px-5 py-3.5 rounded-full bg-gradient-earth text-white font-extrabold text-xs sm:text-sm shadow-clay-green hover:scale-105 active:scale-95 transition-all cursor-pointer border-2 border-white/80"
         >
+          {/* Subtle Animated Pulse Ring */}
+          <span className="absolute -inset-1 rounded-full bg-[#6DB677]/30 animate-ping pointer-events-none -z-10" />
+
           <div className="relative">
             <Bot className="w-5 h-5 group-hover:rotate-12 transition-transform" />
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#FF9E20] rounded-full border border-white animate-pulse" />

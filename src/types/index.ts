@@ -86,6 +86,33 @@ export interface UpcycleProjectResult {
   safetyNote?: string;
 }
 
+export interface DetectedWasteObject {
+  label: string;
+  material: string;
+  dimension?: string;
+  condition: string;
+  estimatedScrapValue?: string;
+  box2d: [number, number, number, number]; // [ymin, xmin, ymax, xmax] normalized 0-1000
+}
+
+export interface UpcycleRecommendation {
+  id: string;
+  title: string;
+  difficulty: 'Mudah' | 'Sedang' | 'Menantang' | string;
+  estimatedTime: string;
+  benchmarkPrice: string;
+  summary: string;
+  materialsNeeded: string[];
+  steps: string[];
+  auxiliaryCost?: string;
+  finishingTips?: string;
+}
+
+export interface WasteAnalysisResult {
+  detectedObject: DetectedWasteObject;
+  recommendations: UpcycleRecommendation[];
+}
+
 export interface EcoQuest {
   id: string;
   title: string;
