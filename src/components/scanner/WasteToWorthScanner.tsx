@@ -538,7 +538,7 @@ export default function WasteToWorthScanner() {
               AI Multimodal Camera Vision
             </span>
             <span className="text-xs font-semibold text-[#1A4D3A]/60 hidden sm:inline">
-              Powered by gemini-2.5-flash Vision
+              Powered by gemini-3.8-flash Vision
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1A4D3A]">

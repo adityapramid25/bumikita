@@ -3,7 +3,7 @@ import { getGeminiClient } from '@/src/lib/gemini';
 import { Type, Schema } from '@google/genai';
 import { WasteAnalysisResult } from '@/src/types';
 
-// Structured Output Schema for Gemini 2.5 Flash
+// Structured Output Schema for Gemini 3.8 Flash
 const analysisSchema: Schema = {
   type: Type.OBJECT,
   properties: {
@@ -152,9 +152,9 @@ User creative intent: "${prompt?.trim() || 'Rekomendasikan 3 ide kreasi upcyclin
 
 Localize the foreground object with normalized bounding box coordinates [ymin, xmin, ymax, xmax] (0-1000) tightly wrapping ONLY the object itself (NOT the desk or background). Return the complete audit and 3 upcycle project blueprints.`;
 
-    // Target verified production vision model gemini-2.5-flash
+    // Target multimodal vision model gemini-3.8-flash
     const response = await aiClient.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: [
         imagePart,
         {
