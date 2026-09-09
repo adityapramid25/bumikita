@@ -28,7 +28,6 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
   const {
     daunPoints,
     cart,
@@ -36,7 +35,7 @@ export default function Navbar() {
     setIsRewardModalOpen,
     treesPlanted,
   } = useEco();
-  const { user, profile, openAuthModal } = useAuth();
+  const { user, profile } = useAuth();
 
   const totalCartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -152,48 +151,48 @@ export default function Navbar() {
             )}
           </button>
 
-          {/* User Profile Button / Modal Trigger */}
-          {user ? (
-            <Link
-              id="btn-nav-auth"
-              href="/dashboard/profile"
-              className="flex items-center gap-2 p-1 sm:p-1.5 rounded-2xl transition-all cursor-pointer shrink-0 border border-white/80 hover:scale-105 active:scale-95 bg-[#FAF8F5] shadow-clay-card"
-              title={`Dashboard Profil: @${profile?.nickname || 'saya'}`}
-            >
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#E8F2ED] flex items-center justify-center overflow-hidden text-[#357A59] font-bold text-xs shadow-clay-inset border border-white">
-                {profile?.avatar_url ? (
-                  <img
-                    src={profile.avatar_url}
-                    alt={profile.full_name || 'Avatar'}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span>
-                    {(profile?.full_name || user.email || 'U')[0].toUpperCase()}
+          {/* User Profile / Auth Button */}
+          <Link
+            id="btn-nav-auth"
+            href={user ? "/profile" : "/auth"}
+            className={`flex items-center gap-2 p-1 sm:p-1.5 rounded-2xl transition-all cursor-pointer shrink-0 border border-white/80 hover:scale-105 active:scale-95 ${
+              user
+                ? 'bg-[#FAF8F5] shadow-clay-card'
+                : 'px-3 py-2 sm:px-3.5 sm:py-2 bg-[#357A59] text-white shadow-clay-btn'
+            }`}
+            title={user ? `Profil: @${profile?.nickname || 'saya'}` : 'Masuk ke BumiKita'}
+          >
+            {user ? (
+              <>
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#E8F2ED] flex items-center justify-center overflow-hidden text-[#357A59] font-bold text-xs shadow-clay-inset border border-white">
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={profile.full_name || 'Avatar'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>
+                      {(profile?.full_name || user.email || 'U')[0].toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="hidden md:flex flex-col text-left pr-2">
+                  <span className="text-xs font-black text-[#1A4D3A] leading-tight line-clamp-1 max-w-[90px]">
+                    {profile?.full_name?.split(' ')[0] || user.email?.split('@')[0]}
                   </span>
-                )}
+                  <span className="text-[10px] font-bold text-[#357A59] leading-tight">
+                    @{profile?.nickname || 'ecowarrior'}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-1.5 font-extrabold text-xs">
+                <User className="w-4 h-4 text-white" />
+                <span>Masuk</span>
               </div>
-              <div className="hidden md:flex flex-col text-left pr-2">
-                <span className="text-xs font-black text-[#1A4D3A] leading-tight line-clamp-1 max-w-[90px]">
-                  {profile?.full_name?.split(' ')[0] || user.email?.split('@')[0]}
-                </span>
-                <span className="text-[10px] font-bold text-[#357A59] leading-tight">
-                  @{profile?.nickname || 'ecowarrior'}
-                </span>
-              </div>
-            </Link>
-          ) : (
-            <button
-              id="btn-nav-auth"
-              type="button"
-              onClick={() => openAuthModal('login')}
-              className="w-11 h-11 sm:w-auto sm:px-3.5 sm:py-2 flex items-center justify-center gap-2 rounded-2xl transition-all cursor-pointer shrink-0 border border-white/80 hover:scale-105 active:scale-95 bg-[#357A59] text-white shadow-clay-btn font-extrabold text-xs"
-              title="Masuk / Daftar Akun BumiKita"
-            >
-              <User className="w-5 h-5 text-white" />
-              <span className="hidden sm:inline">Masuk</span>
-            </button>
-          )}
+            )}
+          </Link>
         </div>
       </div>
 

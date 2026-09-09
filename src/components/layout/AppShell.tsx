@@ -10,17 +10,24 @@ import ProductModal from '@/src/components/market/ProductModal';
 import CartDrawer from '@/src/components/market/CartDrawer';
 import RewardModal from '@/src/components/rewards/RewardModal';
 import EcoAIAssistant from '@/src/components/chat/EcoAIAssistant';
-import AuthModal from '@/src/components/auth/AuthModal';
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  // Isolate view: Never render top navbar, bottom nav, or footer on /auth route
-  const isAuthPage = pathname === '/auth';
+  const isAuthPage = pathname === '/auth' || pathname?.startsWith('/auth');
+
+  // If on the auth page, render only the page content without navbar, footer, or auxiliary modals
+  if (isAuthPage) {
+    return (
+      <div className="min-h-screen w-full bg-[#F5F2ED] text-[#1A4D3A] flex flex-col justify-center items-center">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F5F2ED] text-[#1A4D3A]">
-      {/* Sticky Claymorphic Top Navbar (Hidden on Auth page) */}
-      {!isAuthPage && <Navbar />}
+      {/* Sticky Claymorphic Top Navbar */}
+      <Navbar />
 
       {/* Dynamic Route Page Body */}
       <main className="flex-1 w-full">
@@ -32,10 +39,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
       <CartDrawer />
       <RewardModal />
       <EcoAIAssistant />
-      <AuthModal />
 
-      {/* Footer (Hidden on Auth page) */}
-      {!isAuthPage && <Footer />}
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
