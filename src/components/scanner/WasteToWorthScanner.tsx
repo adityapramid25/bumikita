@@ -907,7 +907,7 @@ export default function WasteToWorthScanner() {
 
           <div className="space-y-2">
             <h3 className="text-xl font-black tracking-tight text-[#1A4D3A]">
-              Gemini Vision Sedang Memindai...
+              Bumikita AI Sedang Memindai...
             </h3>
             <p className="text-sm font-semibold text-[#357A59] min-h-[24px]">
               {analyzingStepText}
@@ -1005,54 +1005,57 @@ export default function WasteToWorthScanner() {
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               exit={{ opacity: 0, y: 15, scale: 0.98 }}
                               transition={{ duration: 0.3, ease: 'easeOut' }}
-                              className="absolute inset-x-2.5 bottom-2.5 z-20"
+                              className="absolute bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 z-20"
                             >
                               <div 
                                 onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
-                                className="bg-[#1D2128]/90 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/20 shadow-2xl space-y-2.5 text-white transition-all cursor-pointer hover:bg-[#1D2128]/95"
+                                className="bg-neutral-900/85 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-white/15 shadow-xl space-y-2.5 text-white transition-all cursor-pointer hover:bg-neutral-900/90"
                               >
-                                {/* Header: Glowing Status Indicator + Condition Pill */}
+                                {/* Header: Compact Status Indicator + Condition Pill */}
                                 <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <span className="relative flex h-2.5 w-2.5">
-                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#6DB677] opacity-60"></span>
-                                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#6DB677] shadow-[0_0_8px_#6DB677]"></span>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="relative flex h-2 w-2">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
                                     </span>
-                                    <span className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-[#6DB677] truncate">
-                                      AI Material Grade Locked
+                                    <span className="text-[11px] font-bold tracking-wider text-emerald-400 uppercase">
+                                      AI AUDIT
                                     </span>
                                   </div>
                                   
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-[#FF9E20]/20 text-[#FF9E20] border border-[#FF9E20]/40 shrink-0">
-                                    <Sparkles className="w-3 h-3" />
+                                  <span className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold flex items-center gap-1">
+                                    <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
                                     <span>{analysisResult.detectedObject.condition}</span>
                                   </span>
                                 </div>
 
-                                {/* Main Title & Material Grade */}
-                                <div className="space-y-0.5">
-                                  <h3 className="text-sm sm:text-base font-extrabold text-white tracking-tight leading-snug line-clamp-1">
+                                {/* Middle Section (Item Name & Material) */}
+                                <div className="space-y-1">
+                                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight leading-snug">
                                     {analysisResult.detectedObject.label}
                                   </h3>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-[11px] sm:text-xs text-[#6DB677] font-semibold">
-                                      Bahan:
-                                    </span>
-                                    <span className="text-[11px] sm:text-xs text-[#ECEAEA] font-medium truncate">
-                                      {analysisResult.detectedObject.material}
-                                    </span>
+                                  <div className="flex items-center gap-1.5 text-xs text-emerald-300/90 font-medium">
+                                    <span className="text-emerald-400/80 font-semibold">Bahan:</span>
+                                    <span>{analysisResult.detectedObject.material}</span>
                                   </div>
                                 </div>
 
-                                {/* Micro Details Grid (Dimension & Scrap Value) */}
-                                <div className="pt-2 border-t border-white/10 grid grid-cols-2 gap-2 text-[10px] sm:text-[11px] items-center">
-                                  <div className="flex items-center gap-1.5 text-[#A0A5B0]">
-                                    <Package className="w-3.5 h-3.5 text-[#6DB677] shrink-0" />
-                                    <span className="truncate">{analysisResult.detectedObject.dimension || 'Ukuran Sedang'}</span>
+                                {/* Bottom Meta Grid (Stacked on Mobile, 2-Cols on Wider Screens) */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2.5 border-t border-white/10 items-center">
+                                  {/* Left Cell: Dimensi */}
+                                  <div className="flex items-center gap-1.5 text-white/80">
+                                    <Package className="w-3.5 h-3.5 text-white/60 shrink-0" />
+                                    <span className="text-[11px] leading-tight">
+                                      {analysisResult.detectedObject.dimension || 'Ukuran Sedang'}
+                                    </span>
                                   </div>
-                                  <div className="flex items-center gap-1.5 text-[#FF9E20] font-bold justify-end">
-                                    <Coins className="w-3.5 h-3.5 shrink-0" />
-                                    <span className="truncate">{analysisResult.detectedObject.estimatedScrapValue || 'Siap Daur Ulang'}</span>
+
+                                  {/* Right Cell: Nilai Rongsok */}
+                                  <div className="flex items-center gap-1.5 text-amber-300 font-semibold justify-start sm:justify-end">
+                                    <Coins className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                    <span className="text-[11px] leading-tight text-left sm:text-right">
+                                      {analysisResult.detectedObject.estimatedScrapValue || 'Siap Daur Ulang'}
+                                    </span>
                                   </div>
                                 </div>
 
@@ -1061,9 +1064,9 @@ export default function WasteToWorthScanner() {
                                   <motion.div 
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: 'auto' }}
-                                    className="pt-2 border-t border-white/10 text-[10px] text-[#A0A5B0] flex items-center justify-between"
+                                    className="pt-2 border-t border-white/10 text-[10px] text-white/60 flex items-center justify-between"
                                   >
-                                    <span>Klik untuk sembunyikan rincian sensor</span>
+                                    <span>Sensor Vision aktif · Klik untuk persempit rincian</span>
                                     <ChevronUp className="w-3.5 h-3.5 text-white/60" />
                                   </motion.div>
                                 )}
