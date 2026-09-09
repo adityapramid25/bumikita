@@ -168,83 +168,132 @@ export default function WasteToWorthScanner() {
   const streamRef = useRef<MediaStream | null>(null);
   const [isShutterFlashing, setIsShutterFlashing] = useState(false);
 
-  // Exact Rendered Image Intrinsic Geometry Tracking
+  // Exact Rendered Image Intrinsic Geometry & Bounding Box Calculation
+  // Calculates coordinates relative to the intrinsic naturalWidth/naturalHeight of the rendered <img> element
+  // instead of offsetWidth/offsetHeight to prevent bounding box floatation due to padding, border, or letterbox bars.
   const auditContainerRef = useRef<HTMLDivElement>(null);
   const auditImageRef = useRef<HTMLImageElement>(null);
-  const [imageBounds, setImageBounds] = useState<{
-    offsetX: number;
-    offsetY: number;
-    renderedWidth: number;
-    renderedHeight: number;
+  const [boxOverlayCoords, setBoxOverlayCoords] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+    isReady: boolean;
   }>({
-    offsetX: 0,
-    offsetY: 0,
-    renderedWidth: 0,
-    renderedHeight: 0,
+    top: 0,
+    left: 0,
+    width: 0,
+    height: 0,
+    isReady: false,
   });
 
-  // Calculate precise rendered dimensions and offsets accounting for object-contain letterboxing/pillarboxing
-  const updateImageBounds = useCallback(() => {
+  // Calculate coordinates relative to intrinsic natural width/height of the rendered <img> element
+  // using naturalWidth/naturalHeight instead of offsetWidth/offsetHeight.
+  // Correctly maps 0-1000 normalized vision coordinates to the displayed image's exact dimensions, fixing floatation.
+  const updateBoundingBoxOverlay = useCallback(() => {
     const img = auditImageRef.current;
     const container = auditContainerRef.current;
     if (!img || !container) return;
 
-    const containerRect = container.getBoundingClientRect();
-    const imgRect = img.getBoundingClientRect();
+    // Use naturalWidth and naturalHeight of the <img> element instead of offsetWidth / offsetHeight
+    const naturalWidth = img.naturalWidth;
+    const naturalHeight = img.naturalHeight;
 
-    const nWidth = img.naturalWidth;
-    const nHeight = img.naturalHeight;
-
-    if (!nWidth || !nHeight || imgRect.width === 0 || imgRect.height === 0) {
+    if (!naturalWidth || !naturalHeight) {
       return;
     }
 
-    const elemWidth = imgRect.width;
-    const elemHeight = imgRect.height;
-    const elemRatio = elemWidth / elemHeight;
-    const intrinsicRatio = nWidth / nHeight;
+    const containerRect = container.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
 
-    let renderedWidth = elemWidth;
-    let renderedHeight = elemHeight;
+    if (imgRect.width === 0 || imgRect.height === 0) {
+      return;
+    }
+
+    // Determine intrinsic aspect ratio and compare with element box to handle letterboxing/pillarboxing
+    const intrinsicRatio = naturalWidth / naturalHeight;
+    const elementRatio = imgRect.width / imgRect.height;
+
+    let displayedWidth = imgRect.width;
+    let displayedHeight = imgRect.height;
     let innerOffsetX = 0;
     let innerOffsetY = 0;
 
-    // Calculate letterbox/pillarbox created by object-contain inside the rendered img element
-    if (intrinsicRatio > elemRatio) {
-      // Image is wider than element box: constrained by width, letterboxed vertically
-      renderedWidth = elemWidth;
-      renderedHeight = elemWidth / intrinsicRatio;
+    if (intrinsicRatio > elementRatio) {
+      // Letterbox: image is constrained by width, letterboxed vertically
+      displayedWidth = imgRect.width;
+      displayedHeight = imgRect.width / intrinsicRatio;
       innerOffsetX = 0;
-      innerOffsetY = (elemHeight - renderedHeight) / 2;
+      innerOffsetY = (imgRect.height - displayedHeight) / 2;
     } else {
-      // Image is taller than element box: constrained by height, pillarboxed horizontally
-      renderedHeight = elemHeight;
-      renderedWidth = elemHeight * intrinsicRatio;
-      innerOffsetX = (elemWidth - renderedWidth) / 2;
+      // Pillarbox: image is constrained by height, pillarboxed horizontally
+      displayedHeight = imgRect.height;
+      displayedWidth = imgRect.height * intrinsicRatio;
+      innerOffsetX = (imgRect.width - displayedWidth) / 2;
       innerOffsetY = 0;
     }
 
-    // Offset relative to the container div
-    const totalOffsetX = (imgRect.left - containerRect.left) + innerOffsetX;
-    const totalOffsetY = (imgRect.top - containerRect.top) + innerOffsetY;
+    // Offset of the displayed image content relative to auditContainerRef
+    const originX = (imgRect.left - containerRect.left) + innerOffsetX;
+    const originY = (imgRect.top - containerRect.top) + innerOffsetY;
 
-    setImageBounds({
-      offsetX: Math.max(0, Math.round(totalOffsetX)),
-      offsetY: Math.max(0, Math.round(totalOffsetY)),
-      renderedWidth: Math.round(renderedWidth),
-      renderedHeight: Math.round(renderedHeight),
+    // Normalizing Vision API coordinates [ymin, xmin, ymax, xmax] (0 to 1000 scale)
+    const rawBox = analysisResult?.detectedObject?.box2d || [150, 150, 850, 850];
+    let [ymin, xmin, ymax, xmax] = Array.isArray(rawBox) && rawBox.length === 4
+      ? rawBox.map((v) => Number(v) || 0)
+      : [150, 150, 850, 850];
+
+    // If model returned 0.0 - 1.0 float scale instead of 0 - 1000, normalize to 0 - 1000
+    if (Math.max(ymin, xmin, ymax, xmax) <= 1.0 && Math.max(ymin, xmin, ymax, xmax) > 0) {
+      ymin = Math.round(ymin * 1000);
+      xmin = Math.round(xmin * 1000);
+      ymax = Math.round(ymax * 1000);
+      xmax = Math.round(xmax * 1000);
+    }
+
+    const safeYmin = Math.max(0, Math.min(1000, Math.min(ymin, ymax)));
+    const safeYmax = Math.max(safeYmin + 10, Math.min(1000, Math.max(ymin, ymax)));
+    const safeXmin = Math.max(0, Math.min(1000, Math.min(xmin, xmax)));
+    const safeXmax = Math.max(safeXmin + 10, Math.min(1000, Math.max(xmin, xmax)));
+
+    // Scale calculation correctly mapping 0-1000 normalized vision coordinates to displayed image dimensions:
+    // Scale factor from natural coordinates to displayed screen coordinates
+    const scaleX = displayedWidth / naturalWidth;
+    const scaleY = displayedHeight / naturalHeight;
+
+    // Convert 0-1000 normalized coordinates to intrinsic natural dimensions (pixels):
+    const naturalBoxX = (safeXmin / 1000) * naturalWidth;
+    const naturalBoxY = (safeYmin / 1000) * naturalHeight;
+    const naturalBoxWidth = ((safeXmax - safeXmin) / 1000) * naturalWidth;
+    const naturalBoxHeight = ((safeYmax - safeYmin) / 1000) * naturalHeight;
+
+    // Map to exact displayed dimensions on screen:
+    const boxLeft = originX + (naturalBoxX * scaleX);
+    const boxTop = originY + (naturalBoxY * scaleY);
+    const boxWidth = naturalBoxWidth * scaleX;
+    const boxHeight = naturalBoxHeight * scaleY;
+
+    setBoxOverlayCoords({
+      top: Math.max(0, Math.round(boxTop)),
+      left: Math.max(0, Math.round(boxLeft)),
+      width: Math.max(16, Math.round(boxWidth)),
+      height: Math.max(16, Math.round(boxHeight)),
+      isReady: true,
     });
-  }, []);
+  }, [analysisResult]);
 
-  // Recalculate bounds on image changes or analysis result
+  // Recalculate bounding box when image or analysis result updates
   useEffect(() => {
     if (selectedImage && analysisResult) {
+      if (auditImageRef.current?.complete && auditImageRef.current?.naturalWidth) {
+        updateBoundingBoxOverlay();
+      }
       const timer = setTimeout(() => {
-        updateImageBounds();
+        updateBoundingBoxOverlay();
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [selectedImage, analysisResult, updateImageBounds]);
+  }, [selectedImage, analysisResult, updateBoundingBoxOverlay]);
 
   // Handle dynamic resizing & orientation changes with ResizeObserver
   useEffect(() => {
@@ -253,18 +302,18 @@ export default function WasteToWorthScanner() {
     if (!container) return;
 
     const observer = new ResizeObserver(() => {
-      updateImageBounds();
+      updateBoundingBoxOverlay();
     });
 
     observer.observe(container);
     if (img) observer.observe(img);
 
-    window.addEventListener('resize', updateImageBounds);
+    window.addEventListener('resize', updateBoundingBoxOverlay);
     return () => {
       observer.disconnect();
-      window.removeEventListener('resize', updateImageBounds);
+      window.removeEventListener('resize', updateBoundingBoxOverlay);
     };
-  }, [updateImageBounds, selectedImage, analysisResult]);
+  }, [updateBoundingBoxOverlay, selectedImage, analysisResult]);
 
   // Clean up camera stream
   const stopCamera = useCallback(() => {
@@ -1092,57 +1141,38 @@ export default function WasteToWorthScanner() {
                         ref={auditImageRef}
                         src={selectedImage} 
                         alt={analysisResult.detectedObject.label || 'Identified Object'} 
-                        onLoad={updateImageBounds}
+                        onLoad={updateBoundingBoxOverlay}
                         className="w-full h-auto max-h-[520px] object-contain block mx-auto rounded-xl shadow-md"
                       />
 
-                      {/* Tactile Glowing Bounding Box Overlay strictly mapped to image intrinsic aspect ratio */}
+                      {/* Tactile Glowing Bounding Box Overlay strictly mapped to image intrinsic natural dimensions */}
                       {isOverlayVisible && (
-                        <div
-                          className="absolute pointer-events-none z-10"
-                          style={
-                            imageBounds.renderedWidth > 0 && imageBounds.renderedHeight > 0
-                              ? {
-                                  top: `${imageBounds.offsetY}px`,
-                                  left: `${imageBounds.offsetX}px`,
-                                  width: `${imageBounds.renderedWidth}px`,
-                                  height: `${imageBounds.renderedHeight}px`,
-                                }
-                              : {
-                                  top: 0,
-                                  left: 0,
-                                  width: '100%',
-                                  height: '100%',
-                                }
-                          }
+                        <motion.div 
+                          initial={{ scale: 0.95, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="absolute pointer-events-none transition-all duration-300 z-10"
+                          style={{
+                            top: boxOverlayCoords.isReady ? `${boxOverlayCoords.top}px` : top,
+                            left: boxOverlayCoords.isReady ? `${boxOverlayCoords.left}px` : left,
+                            height: boxOverlayCoords.isReady ? `${boxOverlayCoords.height}px` : height,
+                            width: boxOverlayCoords.isReady ? `${boxOverlayCoords.width}px` : width,
+                          }}
                         >
-                          <motion.div 
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="absolute pointer-events-none transition-all duration-300 z-10"
-                            style={{
-                              top,
-                              left,
-                              height,
-                              width,
-                            }}
-                          >
-                            {/* Green glowing border with corner reticles */}
-                            <div className="w-full h-full border-2 sm:border-3 border-[#6DB677] rounded-lg bg-[#6DB677]/20 shadow-[0_0_20px_rgba(109,182,119,0.6)] relative">
-                              {/* Target Reticle Corners */}
-                              <div className="absolute -top-1 -left-1 w-3.5 h-3.5 border-t-2 border-l-2 border-white" />
-                              <div className="absolute -top-1 -right-1 w-3.5 h-3.5 border-t-2 border-r-2 border-white" />
-                              <div className="absolute -bottom-1 -left-1 w-3.5 h-3.5 border-b-2 border-l-2 border-white" />
-                              <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 border-b-2 border-r-2 border-white" />
+                          {/* Green glowing border with corner reticles */}
+                          <div className="w-full h-full border-2 sm:border-3 border-[#6DB677] rounded-lg bg-[#6DB677]/20 shadow-[0_0_20px_rgba(109,182,119,0.6)] relative">
+                            {/* Target Reticle Corners */}
+                            <div className="absolute -top-1 -left-1 w-3.5 h-3.5 border-t-2 border-l-2 border-white" />
+                            <div className="absolute -top-1 -right-1 w-3.5 h-3.5 border-t-2 border-r-2 border-white" />
+                            <div className="absolute -bottom-1 -left-1 w-3.5 h-3.5 border-b-2 border-l-2 border-white" />
+                            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 border-b-2 border-r-2 border-white" />
 
-                              {/* Top Identification Badge Pin */}
-                              <div className="absolute -top-7 left-0 bg-[#357A59] text-white text-[10px] sm:text-[11px] font-bold px-2.5 py-0.5 rounded-lg shadow-md flex items-center gap-1.5 whitespace-nowrap z-20">
-                                <span className="w-2 h-2 rounded-full bg-[#6DB677] animate-ping" />
-                                <span>{analysisResult.detectedObject.label}</span>
-                              </div>
+                            {/* Top Identification Badge Pin */}
+                            <div className="absolute -top-7 left-0 bg-[#357A59] text-white text-[10px] sm:text-[11px] font-bold px-2.5 py-0.5 rounded-lg shadow-md flex items-center gap-1.5 whitespace-nowrap z-20">
+                              <span className="w-2 h-2 rounded-full bg-[#6DB677] animate-ping" />
+                              <span>{analysisResult.detectedObject.label}</span>
                             </div>
-                          </motion.div>
-                        </div>
+                          </div>
+                        </motion.div>
                       )}
                     </div>
                   )}
