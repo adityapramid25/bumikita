@@ -32,9 +32,7 @@ import {
   Layers,
   HelpCircle,
   Crop,
-  Package,
-  ChevronDown,
-  ChevronUp
+  Package
 } from 'lucide-react';
 
 const SUGGESTION_CHIPS = [
@@ -148,7 +146,6 @@ export default function WasteToWorthScanner() {
   const [analysisResult, setAnalysisResult] = useState<WasteAnalysisResult | null>(null);
   const [selectedRecId, setSelectedRecId] = useState<string | null>(null);
   const [isSmartOverlayVisible, setIsSmartOverlayVisible] = useState(true);
-  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [checkedMaterials, setCheckedMaterials] = useState<string[]>([]);
   const [isClaimed, setIsClaimed] = useState(false);
@@ -999,7 +996,7 @@ export default function WasteToWorthScanner() {
                               </div>
                             </motion.div>
 
-                            {/* 2. Interactive Bottom Banner / Floating Clay Card at Bottom */}
+                            {/* 2. Floating Info Card at Bottom */}
                             <motion.div 
                               initial={{ opacity: 0, y: 15, scale: 0.98 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1007,69 +1004,59 @@ export default function WasteToWorthScanner() {
                               transition={{ duration: 0.3, ease: 'easeOut' }}
                               className="absolute bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 z-20"
                             >
-                              <div 
-                                onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
-                                className="bg-neutral-900/85 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-white/15 shadow-xl space-y-2.5 text-white transition-all cursor-pointer hover:bg-neutral-900/90"
-                              >
-                                {/* Header: Compact Status Indicator + Condition Pill */}
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-1.5 shrink-0">
-                                    <span className="relative flex h-2 w-2">
-                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-                                    </span>
+                              <div className="p-3.5 sm:p-4 rounded-2xl bg-neutral-900/85 backdrop-blur-md border border-white/15 shadow-xl text-white">
+                                {/* 1. Header Row: Brand Badge & Scrap Value */}
+                                <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-white/10">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                                     <span className="text-[11px] font-bold tracking-wider text-emerald-400 uppercase">
-                                      AI AUDIT
-                                    </span>
-                                  </div>
-                                  
-                                  <span className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold flex items-center gap-1">
-                                    <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
-                                    <span>{analysisResult.detectedObject.condition}</span>
-                                  </span>
-                                </div>
-
-                                {/* Middle Section (Item Name & Material) */}
-                                <div className="space-y-1">
-                                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight leading-snug">
-                                    {analysisResult.detectedObject.label}
-                                  </h3>
-                                  <div className="flex items-center gap-1.5 text-xs text-emerald-300/90 font-medium">
-                                    <span className="text-emerald-400/80 font-semibold">Bahan:</span>
-                                    <span>{analysisResult.detectedObject.material}</span>
-                                  </div>
-                                </div>
-
-                                {/* Bottom Meta Grid (Stacked on Mobile, 2-Cols on Wider Screens) */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2.5 border-t border-white/10 items-center">
-                                  {/* Left Cell: Dimensi */}
-                                  <div className="flex items-center gap-1.5 text-white/80">
-                                    <Package className="w-3.5 h-3.5 text-white/60 shrink-0" />
-                                    <span className="text-[11px] leading-tight">
-                                      {analysisResult.detectedObject.dimension || 'Ukuran Sedang'}
+                                      BumiKita AI
                                     </span>
                                   </div>
 
-                                  {/* Right Cell: Nilai Rongsok */}
-                                  <div className="flex items-center gap-1.5 text-amber-300 font-semibold justify-start sm:justify-end">
-                                    <Coins className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                    <span className="text-[11px] leading-tight text-left sm:text-right">
-                                      {analysisResult.detectedObject.estimatedScrapValue || 'Siap Daur Ulang'}
-                                    </span>
-                                  </div>
+                                  {/* Nilai Rongsok Pill */}
+                                  {analysisResult?.detectedObject?.estimatedScrapValue && (
+                                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/20 text-amber-300 shrink-0">
+                                      <Coins className="w-3 h-3 text-amber-400 shrink-0" />
+                                      <span className="text-[10px] sm:text-xs font-semibold">
+                                        {analysisResult.detectedObject.estimatedScrapValue}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
 
-                                {/* Expandable Spec Note */}
-                                {isDetailsExpanded && (
-                                  <motion.div 
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    className="pt-2 border-t border-white/10 text-[10px] text-white/60 flex items-center justify-between"
-                                  >
-                                    <span>Sensor Vision aktif · Klik untuk persempit rincian</span>
-                                    <ChevronUp className="w-3.5 h-3.5 text-white/60" />
-                                  </motion.div>
-                                )}
+                                {/* 2. Main Title & Material Grade */}
+                                <div className="pt-2.5 pb-2">
+                                  <h4 className="text-base sm:text-lg font-bold text-white tracking-tight leading-snug break-words">
+                                    {analysisResult?.detectedObject?.label}
+                                  </h4>
+                                  <p className="text-xs font-medium text-emerald-300/90 mt-0.5">
+                                    {analysisResult?.detectedObject?.material}
+                                  </p>
+                                </div>
+
+                                {/* 3. Detailed Meta: Dimensi & Kondisi (Clean Stacked Wrap) */}
+                                <div className="space-y-1.5 pt-2 border-t border-white/10 text-[11px] sm:text-xs text-white/80">
+                                  {/* Baris Dimensi */}
+                                  {analysisResult?.detectedObject?.dimension && (
+                                    <div className="flex items-start gap-2">
+                                      <span className="text-white/40 shrink-0 font-medium">Ukuran:</span>
+                                      <span className="text-white/90 break-words flex-1">
+                                        {analysisResult.detectedObject.dimension}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {/* Baris Kondisi (Berada di Bawah Ukuran, Otomatis Enter/Wrap jika Panjang) */}
+                                  {analysisResult?.detectedObject?.condition && (
+                                    <div className="flex items-start gap-2 pt-0.5">
+                                      <span className="text-amber-400/80 shrink-0 font-medium">Kondisi:</span>
+                                      <span className="text-amber-200/90 leading-relaxed break-words whitespace-normal flex-1">
+                                        {analysisResult.detectedObject.condition}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </motion.div>
                           </>
