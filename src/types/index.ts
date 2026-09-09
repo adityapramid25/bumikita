@@ -109,6 +109,8 @@ export interface UpcycleRecommendation {
 }
 
 export interface WasteAnalysisResult {
+  isDetected?: boolean;
+  userFriendlyMessage?: string;
   detectedObject: DetectedWasteObject;
   recommendations: UpcycleRecommendation[];
 }

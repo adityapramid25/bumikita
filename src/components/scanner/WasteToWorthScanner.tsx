@@ -359,6 +359,14 @@ export default function WasteToWorthScanner() {
         throw new Error(json.error || 'Gagal memproses analisis gambar sampah');
       }
 
+      if (json.isDetected === false || json.data?.isDetected === false) {
+        throw new Error(
+          json.userFriendlyMessage ||
+          json.data?.userFriendlyMessage ||
+          'Foto kurang jelas atau tidak terdeteksi objek sampah yang spesifik. Posisikan objek di tengah dengan pencahayaan yang cukup.'
+        );
+      }
+
       const resData: WasteAnalysisResult = json.data;
       setAnalysisResult(resData);
       if (resData.recommendations && resData.recommendations.length > 0) {
@@ -538,7 +546,7 @@ export default function WasteToWorthScanner() {
               AI Multimodal Camera Vision
             </span>
             <span className="text-xs font-semibold text-[#1A4D3A]/60 hidden sm:inline">
-              Powered by gemini-3.8-flash Vision
+              Powered by Qwen 2.5-VL via OpenRouter
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1A4D3A]">
