@@ -33,7 +33,7 @@ Rules:
 1. Object & Material Audit: Identify the primary object or material in the foreground (such as plastic bottle, packaging, cardboard, paper/book, denim/textile, can, glass, scrap, or household item).
 2. Material Classification: Identify the object label in Indonesian (e.g., "Botol Plastik PET", "Kardus Kemasan", "Kain Jeans Bekas", "Buku / Kertas Bekas"), its exact material category, condition, approximate dimension, and realistic scrap recycling value in IDR (harga rongsok kiloan/satuan).
 3. Creative Upcycling Recipes: Generate at least 3 realistic, creative upcycling project recommendations in Indonesian suitable for students/artisans in Indonesia. Each project must have realistic selling benchmark prices (Rp 25.000 - Rp 150.000), required materials, and clear step-by-step instructions.
-4. Bounding Box: Provide normalized coordinates [ymin, xmin, ymax, xmax] (scaled 0 to 1000) tightly wrapping the target object.
+4. Bounding Box: Provide normalized coordinates [ymin, xmin, ymax, xmax] (scaled 0 to 1000) where ymin is top (0=top of image, 1000=bottom), xmin is left (0=left, 1000=right), ymax is bottom, and xmax is right. The box must tightly wrap the primary foreground waste object without enclosing empty background or floor.
 5. Detection Flag: Set "isDetected": true for any visible physical object, scrap, or material. Only set "isDetected": false if the image is completely pitch black or empty.
 
 RETURN STRICTLY RAW VALID JSON ONLY. Do NOT include markdown blocks (\`\`\`json or \`\`\`).

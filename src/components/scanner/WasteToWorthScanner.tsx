@@ -68,7 +68,10 @@ const SAMPLE_DEMO_ITEMS = [
 async function preprocessImage(dataUrlOrBlob: string | Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // Only set crossOrigin for remote http/https URLs, avoid tainting local data: or blob: URLs
+    if (typeof dataUrlOrBlob === 'string' && (dataUrlOrBlob.startsWith('http://') || dataUrlOrBlob.startsWith('https://'))) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => {
       const maxDim = 1024;
       let width = img.width;
@@ -158,10 +161,12 @@ export default function WasteToWorthScanner() {
   const [shareStory, setShareStory] = useState('');
   const [shareSuccess, setShareSuccess] = useState(false);
 
-  // Refs
+  // Refs & Viewfinder Sync
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const viewfinderContainerRef = useRef<HTMLDivElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const [isShutterFlashing, setIsShutterFlashing] = useState(false);
 
   // Clean up camera stream
   const stopCamera = useCallback(() => {
@@ -254,77 +259,93 @@ export default function WasteToWorthScanner() {
     }
   };
 
-  const handleCapturePhoto = async () => {
+  const handleCapturePhoto = (autoAnalyze: boolean = false) => {
     if (!videoRef.current) return;
     const video = videoRef.current;
 
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    // Trigger brief visual shutter flash
+    setIsShutterFlashing(true);
+    setTimeout(() => setIsShutterFlashing(false), 180);
 
-    // Calculate target dimensions based on selected ratio (WYSIWYG crop)
-    let targetWidth = video.videoWidth || 640;
-    let targetHeight = video.videoHeight || 480;
-    let sourceX = 0;
-    let sourceY = 0;
+    const videoWidth = video.videoWidth || video.clientWidth || 640;
+    const videoHeight = video.videoHeight || video.clientHeight || 480;
+
+    // Calculate crop rectangle matching the exact visible on-screen aspect ratio
+    let containerRatio = 1.0;
+    if (viewfinderContainerRef.current) {
+      const rect = viewfinderContainerRef.current.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        containerRatio = rect.width / rect.height;
+      }
+    } else if (aspectRatio === '9:16') {
+      containerRatio = 9 / 16;
+    } else if (aspectRatio === '4:3') {
+      containerRatio = 4 / 3;
+    }
+
+    const videoRatio = videoWidth / videoHeight;
+    let startX = 0;
+    let startY = 0;
+    let cropWidth = videoWidth;
+    let cropHeight = videoHeight;
 
     if (aspectRatio === '1:1') {
-      const size = Math.min(video.videoWidth, video.videoHeight);
-      targetWidth = size;
-      targetHeight = size;
-      sourceX = (video.videoWidth - size) / 2;
-      sourceY = (video.videoHeight - size) / 2;
-    } else if (aspectRatio === '9:16') {
-      // Height priority portrait crop
-      const targetRatio = 9 / 16;
-      const currentRatio = video.videoWidth / video.videoHeight;
-      if (currentRatio > targetRatio) {
-        // Wider than 9:16 (e.g. landscape webcam), crop width symmetrically
-        targetWidth = Math.round((video.videoHeight * 9) / 16);
-        targetHeight = video.videoHeight;
-        sourceX = Math.round((video.videoWidth - targetWidth) / 2);
-        sourceY = 0;
+      // Strict 1:1 Square crop: center-cropped to the minimum dimension
+      const targetSize = Math.min(videoWidth, videoHeight);
+      startX = Math.round((videoWidth - targetSize) / 2);
+      startY = Math.round((videoHeight - targetSize) / 2);
+      cropWidth = targetSize;
+      cropHeight = targetSize;
+    } else if (videoRatio > containerRatio) {
+      // Video is wider than viewfinder (e.g. landscape webcam): crop sides symmetrically
+      cropWidth = Math.round(videoHeight * containerRatio);
+      cropHeight = videoHeight;
+      startX = Math.round((videoWidth - cropWidth) / 2);
+      startY = 0;
+    } else {
+      // Video is taller than viewfinder (e.g. 9:16 phone sensor on 4:3 or square): crop top/bottom symmetrically
+      cropWidth = videoWidth;
+      cropHeight = Math.round(videoWidth / containerRatio);
+      startX = 0;
+      startY = Math.round((videoHeight - cropHeight) / 2);
+    }
+
+    // Scale canvas to max 1024px to preserve high-res detail while keeping payload optimal
+    const maxDim = 1024;
+    let destWidth = cropWidth;
+    let destHeight = cropHeight;
+    if (destWidth > maxDim || destHeight > maxDim) {
+      if (destWidth > destHeight) {
+        destHeight = Math.round((destHeight * maxDim) / destWidth);
+        destWidth = maxDim;
       } else {
-        // Taller than 9:16, crop height symmetrically
-        targetWidth = video.videoWidth;
-        targetHeight = Math.round((video.videoWidth * 16) / 9);
-        sourceX = 0;
-        sourceY = Math.round((video.videoHeight - targetHeight) / 2);
-      }
-    } else if (aspectRatio === '4:3') {
-      const targetRatio = 4 / 3;
-      const currentRatio = video.videoWidth / video.videoHeight;
-      if (currentRatio > targetRatio) {
-        // Wider than 4:3, crop width symmetrically
-        targetWidth = Math.round((video.videoHeight * 4) / 3);
-        targetHeight = video.videoHeight;
-        sourceX = Math.round((video.videoWidth - targetWidth) / 2);
-        sourceY = 0;
-      } else {
-        // Taller than 4:3 (e.g. portrait camera), crop height symmetrically
-        targetWidth = video.videoWidth;
-        targetHeight = Math.round((video.videoWidth * 3) / 4);
-        sourceX = 0;
-        sourceY = Math.round((video.videoHeight - targetHeight) / 2);
+        destWidth = Math.round((destWidth * maxDim) / destHeight);
+        destHeight = maxDim;
       }
     }
 
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
+    const canvas = document.createElement('canvas');
+    canvas.width = destWidth;
+    canvas.height = destHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    // Draw ONLY the cropped frame that matches the on-screen preview
+    // Draw ONLY the exact cropped area visible to the user inside the viewfinder
     ctx.drawImage(
       video,
-      sourceX, sourceY, targetWidth, targetHeight,
-      0, 0, targetWidth, targetHeight
+      startX, startY, cropWidth, cropHeight,
+      0, 0, destWidth, destHeight
     );
 
-    const croppedBase64 = canvas.toDataURL('image/jpeg', 0.90);
-    stopCamera();
+    const base64Image = canvas.toDataURL('image/jpeg', 0.85);
 
-    // Optimize to max 1024x1024
-    const optimized = await preprocessImage(croppedBase64);
-    setSelectedImage(optimized);
+    // Stop camera and immediately set the cropped image
+    stopCamera();
+    setSelectedImage(base64Image);
+
+    if (autoAnalyze) {
+      handleAnalyzeWaste(base64Image);
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -353,8 +374,9 @@ export default function WasteToWorthScanner() {
   };
 
   // Perform AI Waste Analysis
-  const handleAnalyzeWaste = async () => {
-    if (!selectedImage) {
+  const handleAnalyzeWaste = async (imageOverride?: string | React.MouseEvent) => {
+    const activeImage = typeof imageOverride === 'string' ? imageOverride : selectedImage;
+    if (!activeImage) {
       setErrorMessage('Silakan ambil foto atau unggah gambar sampah terlebih dahulu.');
       return;
     }
@@ -375,14 +397,14 @@ export default function WasteToWorthScanner() {
     }, 1800);
 
     try {
-      // Pass selected image directly - backend seamlessly handles both base64 and remote URLs with zero CORS
+      // Pass active image directly - backend seamlessly handles both base64 and remote URLs with zero CORS
       const response = await fetch('/api/gemini/upcycle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: userPrompt,
-          imageBase64: selectedImage,
-          mimeType: selectedImage.startsWith('data:image/png') ? 'image/png' : 'image/jpeg',
+          imageBase64: activeImage,
+          mimeType: activeImage.startsWith('data:image/png') ? 'image/png' : 'image/jpeg',
         }),
       });
 
@@ -661,11 +683,19 @@ export default function WasteToWorthScanner() {
               </div>
             </div>
 
-            <div className={`relative w-full ${
-              aspectRatio === '1:1' ? 'aspect-square' :
-              aspectRatio === '9:16' ? 'aspect-[9/16] max-h-[520px] mx-auto' :
-              'aspect-[4/3]'
-            } bg-[#EAE5DC] rounded-3xl overflow-hidden shadow-clay-card border-2 border-white/80 flex items-center justify-center transition-all duration-300`}>
+            <div 
+              ref={viewfinderContainerRef}
+              className={`relative w-full ${
+                aspectRatio === '1:1' ? 'aspect-square' :
+                aspectRatio === '9:16' ? 'aspect-[9/16] max-h-[520px] mx-auto' :
+                'aspect-[4/3]'
+              } bg-[#EAE5DC] rounded-3xl overflow-hidden shadow-clay-card border-2 border-white/80 flex items-center justify-center transition-all duration-300`}
+            >
+              {/* Shutter Flash Animation */}
+              {isShutterFlashing && (
+                <div className="absolute inset-0 bg-white/90 z-30 pointer-events-none transition-opacity duration-150 animate-pulse" />
+              )}
+
               {/* State A: Live Camera Active */}
               {isCameraActive && (
                 <div className="relative w-full h-full">
@@ -700,7 +730,7 @@ export default function WasteToWorthScanner() {
                     {/* Shutter Capture Button */}
                     <button
                       type="button"
-                      onClick={handleCapturePhoto}
+                      onClick={() => handleCapturePhoto(false)}
                       className="w-16 h-16 rounded-full bg-white text-[#1A4D3A] shadow-xl border-4 border-[#357A59] flex items-center justify-center hover:scale-105 active:scale-90 transition-transform cursor-pointer"
                       title="Ambil Foto"
                     >
@@ -866,7 +896,7 @@ export default function WasteToWorthScanner() {
             <div className="pt-4 border-t border-[#1A4D3A]/10 space-y-2">
               <button
                 type="button"
-                onClick={handleAnalyzeWaste}
+                onClick={() => handleAnalyzeWaste()}
                 disabled={!selectedImage}
                 className="w-full py-3.5 px-6 rounded-2xl bg-gradient-earth text-white shadow-clay-button font-bold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
               >
