@@ -11,6 +11,7 @@ export interface SignUpParams {
   password: string;
   fullName: string;
   nickname?: string;
+  avatarUrl?: string;
   role?: 'student' | 'school' | 'creator';
 }
 
@@ -20,6 +21,10 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isConfigured: boolean;
+  isAuthModalOpen: boolean;
+  authModalMode: 'login' | 'register';
+  openAuthModal: (mode?: 'login' | 'register') => void;
+  closeAuthModal: () => void;
   signUp: (params: SignUpParams) => Promise<{ success: boolean; error?: string; requiresEmailConfirmation?: boolean }>;
   signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
@@ -39,7 +44,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const configured = isSupabaseConfigured();
+
+  const openAuthModal = useCallback((mode: 'login' | 'register' = 'login') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  }, []);
+
+  const closeAuthModal = useCallback(() => {
+    setIsAuthModalOpen(false);
+  }, []);
 
   // Fetch profile from Supabase profiles table
   const fetchProfile = useCallback(async (userId: string) => {
@@ -158,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchProfile]);
 
   // Sign Up with Supabase Auth & raw_user_meta_data
-  const signUp = async ({ email, password, fullName, nickname, role }: SignUpParams) => {
+  const signUp = async ({ email, password, fullName, nickname, avatarUrl, role }: SignUpParams) => {
     const supabase = getSupabase();
 
     if (!supabase) {
@@ -167,7 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const simulatedUser = {
         id: simId,
         email,
-        user_metadata: { full_name: fullName, nickname, role },
+        user_metadata: { full_name: fullName, nickname, avatar_url: avatarUrl, role },
       } as unknown as User;
 
       const mappedRole = role === 'creator' ? 'artisan' : 'citizen';
@@ -175,10 +191,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: simId,
         full_name: fullName,
         nickname: nickname || `eco_${simId.slice(4)}`,
-        avatar_url: null,
+        avatar_url: avatarUrl || null,
         phone_number: null,
         bio: 'Pelopor daur ulang BumiKita.',
-        daun_points: 100,
+        daun_points: 100, // Matches Supabase trigger welcome incentive
         trees_planted: 0,
         eco_role: mappedRole as UserProfile['eco_role'],
         province: null,
@@ -204,6 +220,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             full_name: fullName,
             nickname: nickname || undefined,
+            avatar_url: avatarUrl || undefined,
             role: role || 'student',
           },
         },
@@ -413,6 +430,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         isLoading,
         isConfigured: configured,
+        isAuthModalOpen,
+        authModalMode,
+        openAuthModal,
+        closeAuthModal,
         signUp,
         signIn,
         signOut,
