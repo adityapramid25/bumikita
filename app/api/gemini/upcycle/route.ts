@@ -463,9 +463,26 @@ export async function POST(req: NextRequest) {
       Array.isArray(parsedJson.detectedObject?.box2d) &&
       parsedJson.detectedObject.box2d.length === 4
     ) {
-      detectedObject.box2d = parsedJson.detectedObject.box2d.map((val: any) =>
-        Math.max(0, Math.min(1000, Math.round(Number(val) || 0)))
-      ) as [number, number, number, number];
+      let nums = parsedJson.detectedObject.box2d.map((val: any) => Number(val) || 0);
+      // If model returned 0.0 - 1.0 float range instead of 0 - 1000
+      const maxVal = Math.max(...nums);
+      if (maxVal > 0 && maxVal <= 1.0) {
+        nums = nums.map((v: number) => Math.round(v * 1000));
+      } else {
+        nums = nums.map((v: number) => Math.round(v));
+      }
+
+      const rawYmin = Math.min(nums[0], nums[2]);
+      const rawYmax = Math.max(nums[0], nums[2]);
+      const rawXmin = Math.min(nums[1], nums[3]);
+      const rawXmax = Math.max(nums[1], nums[3]);
+
+      detectedObject.box2d = [
+        Math.max(0, Math.min(1000, rawYmin)),
+        Math.max(0, Math.min(1000, rawXmin)),
+        Math.max(0, Math.min(1000, Math.max(rawYmin + 15, rawYmax))),
+        Math.max(0, Math.min(1000, Math.max(rawXmin + 15, rawXmax))),
+      ] as [number, number, number, number];
     }
 
     const recommendations = (Array.isArray(parsedJson.recommendations) && parsedJson.recommendations.length > 0

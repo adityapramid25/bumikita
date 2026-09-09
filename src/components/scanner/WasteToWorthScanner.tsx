@@ -486,17 +486,31 @@ export default function WasteToWorthScanner() {
     }, 1200);
   };
 
-  // Clamped Normalized Bounding Box [ymin, xmin, ymax, xmax] in 0-1000 scale
+  // Verify Gemini Normalized Coordinate Mapping [ymin, xmin, ymax, xmax] (0 to 1000)
   const rawBox = analysisResult?.detectedObject?.box2d || [150, 150, 850, 850];
-  const ymin = Math.max(0, Math.min(1000, Number(rawBox[0]) || 0));
-  const xmin = Math.max(0, Math.min(1000, Number(rawBox[1]) || 0));
-  const ymax = Math.max(ymin + 10, Math.min(1000, Number(rawBox[2]) || 1000));
-  const xmax = Math.max(xmin + 10, Math.min(1000, Number(rawBox[3]) || 1000));
+  let [ymin, xmin, ymax, xmax] = Array.isArray(rawBox) && rawBox.length === 4
+    ? rawBox.map((v) => Number(v) || 0)
+    : [150, 150, 850, 850];
 
-  const boxTop = (ymin / 1000) * 100;
-  const boxLeft = (xmin / 1000) * 100;
-  const boxHeight = ((ymax - ymin) / 1000) * 100;
-  const boxWidth = ((xmax - xmin) / 1000) * 100;
+  // If model returned 0.0 - 1.0 float scale instead of 0 - 1000, normalize to 0 - 1000
+  if (Math.max(ymin, xmin, ymax, xmax) <= 1.0 && Math.max(ymin, xmin, ymax, xmax) > 0) {
+    ymin = Math.round(ymin * 1000);
+    xmin = Math.round(xmin * 1000);
+    ymax = Math.round(ymax * 1000);
+    xmax = Math.round(xmax * 1000);
+  }
+
+  // Ensure coordinate bounds are clamped within 0 to 1000 and valid dimensions
+  const safeYmin = Math.max(0, Math.min(1000, Math.min(ymin, ymax)));
+  const safeYmax = Math.max(safeYmin + 10, Math.min(1000, Math.max(ymin, ymax)));
+  const safeXmin = Math.max(0, Math.min(1000, Math.min(xmin, xmax)));
+  const safeXmax = Math.max(safeXmin + 10, Math.min(1000, Math.max(xmin, xmax)));
+
+  // CSS positioning strictly matching Gemini 0-1000 normalized format
+  const top = `${(safeYmin / 1000) * 100}%`;
+  const left = `${(safeXmin / 1000) * 100}%`;
+  const height = `${((safeYmax - safeYmin) / 1000) * 100}%`;
+  const width = `${((safeXmax - safeXmin) / 1000) * 100}%`;
 
   return (
     <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-4 space-y-6">
@@ -619,13 +633,13 @@ export default function WasteToWorthScanner() {
                 </div>
               )}
 
-              {/* State B: Photo Selected / Captured Preview */}
+              {/* State B: Photo Selected / Captured Preview (Uncropped Intrinsic Ratio) */}
               {!isCameraActive && selectedImage && (
-                <div className="relative w-full h-full group">
+                <div className="relative w-full h-full group flex items-center justify-center p-2">
                   <img 
                     src={selectedImage} 
                     alt="Preview Sampah" 
-                    className="w-full h-full object-cover"
+                    className="w-full h-auto max-h-full object-contain rounded-2xl"
                   />
                   <div className="absolute top-3 right-3 flex items-center gap-2">
                     <button
@@ -851,27 +865,27 @@ export default function WasteToWorthScanner() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
               {/* Image with Visual Verification Bounding Box Overlay (5 Cols) */}
-              <div className="lg:col-span-5 flex justify-center">
-                <div className="w-full rounded-2xl overflow-hidden bg-[#1D2128] shadow-clay-card border-2 border-white flex items-center justify-center p-2 sm:p-3 min-h-[300px]">
+              <div className="lg:col-span-5 flex justify-center items-start">
+                <div className="w-full rounded-2xl overflow-hidden bg-[#1D2128] shadow-clay-card border-2 border-white p-2 sm:p-3">
                   {selectedImage && (
-                    <div className="relative inline-block max-w-full leading-none select-none">
+                    <div className="relative w-full rounded-xl overflow-hidden select-none leading-none">
                       <img 
                         src={selectedImage} 
-                        alt="Identified Object" 
-                        className="w-auto h-auto max-w-full max-h-[460px] object-contain rounded-xl block mx-auto shadow-md"
+                        alt={analysisResult.detectedObject.label || 'Identified Object'} 
+                        className="w-full h-auto object-contain block rounded-xl shadow-md"
                       />
 
-                      {/* Tactile Glowing Bounding Box Overlay strictly mapped to image aspect ratio */}
+                      {/* Tactile Glowing Bounding Box Overlay strictly mapped to image intrinsic aspect ratio */}
                       {isOverlayVisible && (
                         <motion.div 
                           initial={{ scale: 0.95, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           className="absolute pointer-events-none transition-all duration-300 z-10"
                           style={{
-                            top: `${boxTop}%`,
-                            left: `${boxLeft}%`,
-                            height: `${boxHeight}%`,
-                            width: `${boxWidth}%`,
+                            top,
+                            left,
+                            height,
+                            width,
                           }}
                         >
                           {/* Green glowing border with corner reticles */}
