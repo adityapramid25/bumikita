@@ -127,7 +127,7 @@ async function preprocessImage(dataUrlOrBlob: string | Blob): Promise<string> {
 }
 
 export default function WasteToWorthScanner() {
-  const { addDaunPoints, addCommunityPost } = useEco();
+  const { daunPoints, deductScanPoints, setIsInsufficientModalOpen, addCommunityPost } = useEco();
 
   // Workflow Stages: 'capture' | 'analyzing' | 'results'
   const [stage, setStage] = useState<'capture' | 'analyzing' | 'results'>('capture');
@@ -148,7 +148,6 @@ export default function WasteToWorthScanner() {
   const [isSmartOverlayVisible, setIsSmartOverlayVisible] = useState(true);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [checkedMaterials, setCheckedMaterials] = useState<string[]>([]);
-  const [isClaimed, setIsClaimed] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -345,6 +344,10 @@ export default function WasteToWorthScanner() {
     setSelectedImage(base64Image);
 
     if (autoAnalyze) {
+      if (daunPoints < 50) {
+        setIsInsufficientModalOpen(true);
+        return;
+      }
       handleAnalyzeWaste(base64Image);
     }
   };
@@ -374,11 +377,24 @@ export default function WasteToWorthScanner() {
     }
   };
 
-  // Perform AI Waste Analysis
+  // Perform AI Waste Analysis (Costs 50 Daun Points per scan)
   const handleAnalyzeWaste = async (imageOverride?: string | React.MouseEvent) => {
     const activeImage = typeof imageOverride === 'string' ? imageOverride : selectedImage;
     if (!activeImage) {
       setErrorMessage('Silakan ambil foto atau unggah gambar sampah terlebih dahulu.');
+      return;
+    }
+
+    // Zero-Point Protection: AI Scanner strictly requires at least 50 Daun
+    if (daunPoints < 50) {
+      setIsInsufficientModalOpen(true);
+      return;
+    }
+
+    // Atomic Supabase RPC / State point deduction
+    const deductRes = await deductScanPoints(50);
+    if (!deductRes.success) {
+      setIsInsufficientModalOpen(true);
       return;
     }
 
@@ -424,7 +440,6 @@ export default function WasteToWorthScanner() {
       }
       setCompletedSteps([]);
       setCheckedMaterials([]);
-      setIsClaimed(false);
       setAnalyzingProgress(100);
 
       // Short delay for smooth transition
@@ -449,7 +464,6 @@ export default function WasteToWorthScanner() {
     setSelectedRecId(null);
     setCompletedSteps([]);
     setCheckedMaterials([]);
-    setIsClaimed(false);
     setStage('capture');
   };
 
@@ -479,22 +493,6 @@ export default function WasteToWorthScanner() {
         return [...prev, mat];
       }
     });
-  };
-
-  // Claim Daun Points
-  const handleClaimPoints = () => {
-    if (isClaimed) return;
-    addDaunPoints(60, `Upcycling Blueprint: ${activeRec?.title || 'Karya Daur Ulang'}`);
-    setIsClaimed(true);
-
-    try {
-      confetti({
-        particleCount: 75,
-        spread: 70,
-        origin: { y: 0.65 },
-        colors: ['#357A59', '#6DB677', '#FF9E20', '#FAF8F5'],
-      });
-    } catch (e) {}
   };
 
   // Download PDF Blueprint
@@ -875,12 +873,19 @@ export default function WasteToWorthScanner() {
                 disabled={!selectedImage}
                 className="w-full py-3.5 px-6 rounded-2xl bg-gradient-earth text-white shadow-clay-button font-bold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
               >
-                <Sparkles className="w-5 h-5 text-[#FF9E20] animate-spin" style={{ animationDuration: '4s' }} />
-                <span>Analisis Sampah Sekarang</span>
+                <Sparkles className="w-5 h-5 text-[#FF9E20]" />
+                <span>Analisis Sampah Sekarang (Biaya 50 Daun 🍃)</span>
               </button>
-              <p className="text-[11px] text-center text-[#1A4D3A]/60 font-medium">
-                AI akan mengisolasi objek sampah, mendeteksi polimer, dan menghitung estimasi nilai jual.
-              </p>
+              <div className="flex items-center justify-between text-xs px-1 font-semibold">
+                <span className="text-[#1A4D3A]/70">
+                  Biaya: <strong>50 Daun</strong> per scan
+                </span>
+                <span className={`flex items-center gap-1 ${daunPoints >= 50 ? 'text-[#357A59]' : 'text-[#D97E0D]'}`}>
+                  <span>Sisa Daun Kamu:</span>
+                  <strong>{daunPoints} 🍃</strong>
+                  {daunPoints < 50 && <span className="text-[11px] underline cursor-pointer ml-1" onClick={() => setIsInsufficientModalOpen(true)}>(Isi Daun)</span>}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1379,35 +1384,42 @@ export default function WasteToWorthScanner() {
                 </div>
               )}
 
-              {/* 4. Bottom Reward & Completion Strip */}
+              {/* 4. Bottom Action & Project Completion Strip */}
               <div className="pt-5 border-t border-[#1A4D3A]/10 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3 text-sm">
                   <div className="w-10 h-10 rounded-2xl bg-[#E8F2ED] text-[#357A59] flex items-center justify-center text-xl shrink-0">
-                    🍃
+                    ✨
                   </div>
                   <div>
                     <span className="font-bold text-[#1A4D3A] block">
-                      Reward Pembuatan: +60 Daun Points
+                      Blueprint Siap Dieksekusi
                     </span>
                     <span className="text-xs text-[#1A4D3A]/60">
-                      Tukarkan poin dengan pohon nyata GPS atau diskon market.
+                      Selesaikan misi harian untuk mengumpulkan lebih banyak Daun Points!
                     </span>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleClaimPoints}
-                  disabled={isClaimed}
-                  className={`px-5 py-2.5 rounded-2xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
-                    isClaimed
-                      ? 'bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/30 pointer-events-none'
-                      : 'bg-gradient-earth text-white shadow-clay-button hover:scale-105 active:scale-95'
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4 text-[#FF9E20]" />
-                  <span>{isClaimed ? '✓ 60 Daun Telah Diklaim' : 'Klaim Daun Points Sekarang'}</span>
-                </button>
+                <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    disabled={isDownloadingPdf}
+                    className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-[#FAF8F5] border border-[#1A4D3A]/10 text-[#1A4D3A] font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-[#E8F2ED] hover:border-[#357A59] transition-all cursor-pointer"
+                  >
+                    <Download className="w-4 h-4 text-[#357A59]" />
+                    <span>{isDownloadingPdf ? 'Membuat PDF...' : 'Unduh PDF'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsShareModalOpen(true)}
+                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 bg-gradient-earth text-white shadow-clay-button hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span>Bagikan Karya</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}

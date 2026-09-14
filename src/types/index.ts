@@ -131,6 +131,30 @@ export interface EcoQuest {
   };
 }
 
+export interface DailyMission {
+  id: string;
+  title: string;
+  description: string;
+  reward_points: number;
+  action_type: 'instant' | 'share' | 'navigate';
+  target_count: number;
+  icon_name: string;
+  is_active: boolean;
+  created_at?: string;
+  is_claimed?: boolean;
+  claimed_at?: string;
+}
+
+export interface UserMissionLog {
+  id: string;
+  user_id: string;
+  mission_id: string;
+  completed_date: string;
+  is_claimed: boolean;
+  claimed_at?: string;
+  created_at?: string;
+}
+
 export interface TreeMilestone {
   id: string;
   species: string;

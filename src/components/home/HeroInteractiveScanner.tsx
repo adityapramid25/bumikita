@@ -13,8 +13,10 @@ import {
   Clock, 
   CheckCircle2, 
   Flame,
-  UploadCloud
+  UploadCloud,
+  Leaf
 } from 'lucide-react';
+import { useEco } from '@/src/context/EcoContext';
 
 interface UpcycleResult {
   detectedItemName: string;
@@ -151,6 +153,7 @@ const SAMPLE_PREVIEWS: Record<string, { icon: string; image: string; data: Upcyc
 };
 
 export default function HeroInteractiveScanner() {
+  const { daunPoints, deductScanPoints, setIsInsufficientModalOpen } = useEco();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<UpcycleResult | null>(null);
@@ -168,6 +171,19 @@ export default function HeroInteractiveScanner() {
   };
 
   const processScan = async (base64Image: string, sampleKey?: string) => {
+    // Zero-point protection check
+    if (daunPoints < 50) {
+      setIsInsufficientModalOpen(true);
+      return;
+    }
+
+    // Atomic deduction of 50 Daun Points
+    const deductRes = await deductScanPoints(50);
+    if (!deductRes.success) {
+      setIsInsufficientModalOpen(true);
+      return;
+    }
+
     setSelectedImage(base64Image);
     setIsLoading(true);
     setActiveSampleKey(sampleKey || null);
@@ -366,16 +382,22 @@ export default function HeroInteractiveScanner() {
               className="relative clay-card p-6 sm:p-8 lg:p-10 space-y-6 overflow-hidden border-2 border-white/80"
             >
               {/* Card Header Tag */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-[#6DB677] animate-pulse" />
                   <span className="text-xs font-extrabold uppercase tracking-widest text-[#357A59]">
                     Live AI Vision Scanner
                   </span>
                 </div>
-                <span className="text-[11px] font-mono text-[#1A4D3A]/50">
-                  v2.4
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FAF8F5] border border-white text-[11px] font-bold text-[#1A4D3A] shadow-clay-sm">
+                    <Leaf className="w-3 h-3 text-[#357A59]" />
+                    <span>Biaya: 50 Daun</span>
+                  </span>
+                  <span className={`text-[11px] font-bold ${daunPoints >= 50 ? 'text-[#357A59]' : 'text-[#D97E0D]'}`}>
+                    Poin: {daunPoints} 🍃
+                  </span>
+                </div>
               </div>
 
               {/* State 1: Dropzone (When no result yet) */}

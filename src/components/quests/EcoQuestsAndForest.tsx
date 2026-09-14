@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
+import confetti from 'canvas-confetti';
 import { useEco } from '@/src/context/EcoContext';
 import { 
   TreePine, 
@@ -15,7 +17,14 @@ import {
   ChevronRight, 
   Download,
   Calendar,
-  Compass
+  Compass,
+  CalendarCheck,
+  Share2,
+  ShoppingBag,
+  BookOpen,
+  Check,
+  ExternalLink,
+  Info
 } from 'lucide-react';
 
 export default function EcoQuestsAndForest() {
@@ -23,6 +32,8 @@ export default function EcoQuestsAndForest() {
     daunPoints, 
     quests, 
     completeQuest, 
+    dailyMissions,
+    claimDailyMission,
     treesPlanted, 
     plantedTreesList, 
     plantRealTree,
@@ -30,6 +41,9 @@ export default function EcoQuestsAndForest() {
   } = useEco();
 
   const [selectedTreeCert, setSelectedTreeCert] = useState<any | null>(null);
+  const [claimingMissionId, setClaimingMissionId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [activeTipModal, setActiveTipModal] = useState<boolean>(false);
 
   // Growth calculation (400 points per tree)
   const treeCost = 400;
@@ -37,6 +51,47 @@ export default function EcoQuestsAndForest() {
 
   const handleCompleteQuest = (id: string) => {
     completeQuest(id);
+  };
+
+  const handleClaimDaily = async (missionId: string, actionType: string) => {
+    setClaimingMissionId(missionId);
+
+    if (actionType === 'share') {
+      try {
+        if (typeof navigator !== 'undefined' && navigator.share) {
+          await navigator.share({
+            title: 'BumiKita - AI Upcycling & Circular Economy',
+            text: 'Yuk pilah sampah dan hasilkan cuan karya kreatif bersama BumiKita!',
+            url: typeof window !== 'undefined' ? window.location.origin : 'https://bumikita.id',
+          });
+        } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+          await navigator.clipboard.writeText(
+            `${typeof window !== 'undefined' ? window.location.origin : 'https://bumikita.id'} - Yuk pilah sampah & dapatkan cuan di BumiKita!`
+          );
+        }
+      } catch (err) {
+        // User may cancel native sheet, continue to claim
+      }
+    }
+
+    const res = await claimDailyMission(missionId);
+    setClaimingMissionId(null);
+
+    if (res.success) {
+      try {
+        confetti({
+          particleCount: 70,
+          spread: 60,
+          origin: { y: 0.65 },
+          colors: ['#357A59', '#6DB677', '#FF9E20', '#FAF8F5'],
+        });
+      } catch {}
+      setToastMessage(res.message);
+      setTimeout(() => setToastMessage(null), 4000);
+    } else {
+      setToastMessage(res.message);
+      setTimeout(() => setToastMessage(null), 4000);
+    }
   };
 
   const getRank = () => {
@@ -177,6 +232,151 @@ export default function EcoQuestsAndForest() {
         </div>
       </div>
 
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-20 right-4 z-50 bg-[#1A4D3A] text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 animate-in slide-in-from-top-2">
+          <Sparkles className="w-4 h-4 text-[#FF9E20]" />
+          <span className="text-xs sm:text-sm font-bold">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* =========================================================================
+          DAILY MISSIONS (PRIMARY REVENUE SOURCE FOR DAUN POINTS)
+      ========================================================================= */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#E8F2ED] text-[#357A59] text-xs font-bold mb-1">
+              <Coins className="w-3.5 h-3.5" />
+              <span>Sumber Utama Daun Poin</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-extrabold text-[#1A4D3A] tracking-tight">
+              Misi Harian Daun (Daily Missions)
+            </h3>
+            <p className="text-xs sm:text-sm text-[#1A4D3A]/70">
+              Klaim Daun setiap hari untuk membiayai AI Scanner sampah (50 Daun/scan) atau menanam pohon!
+            </p>
+          </div>
+          <div className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-[#FAF8F5] border border-white shadow-clay-sm text-xs font-bold text-[#357A59] flex items-center gap-1.5">
+            <span>Saldo:</span>
+            <span className="text-[#1A4D3A] font-extrabold">{daunPoints} Daun 🍃</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {dailyMissions.map((mission) => {
+            const isClaimed = mission.is_claimed;
+            const isLoading = claimingMissionId === mission.id;
+
+            const renderIcon = () => {
+              if (mission.icon_name === 'CalendarCheck' || mission.id === 'daily_checkin') {
+                return <CalendarCheck className="w-5 h-5 text-[#357A59]" />;
+              }
+              if (mission.icon_name === 'Share2' || mission.id === 'share_friend') {
+                return <Share2 className="w-5 h-5 text-[#FF9E20]" />;
+              }
+              if (mission.icon_name === 'ShoppingBag' || mission.id === 'explore_market') {
+                return <ShoppingBag className="w-5 h-5 text-[#357A59]" />;
+              }
+              return <BookOpen className="w-5 h-5 text-[#357A59]" />;
+            };
+
+            return (
+              <div
+                key={mission.id}
+                className={`p-5 rounded-3xl border transition-all flex flex-col justify-between space-y-4 ${
+                  isClaimed
+                    ? 'bg-[#E8F2ED]/60 border-[#357A59]/20 shadow-clay-sm opacity-85'
+                    : 'bg-[#FAF8F5] border-white shadow-clay-card hover:scale-[1.01]'
+                }`}
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-2xl bg-white shadow-clay-sm flex items-center justify-center">
+                      {renderIcon()}
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20">
+                      +{mission.reward_points} Daun 🍃
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 className="font-extrabold text-sm text-[#1A4D3A]">
+                      {mission.title}
+                    </h4>
+                    <p className="text-xs text-[#1A4D3A]/70 leading-relaxed mt-0.5">
+                      {mission.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  {mission.id === 'read_eco_tip' && !isClaimed ? (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTipModal(true);
+                          handleClaimDaily(mission.id, 'read');
+                        }}
+                        disabled={isLoading}
+                        className="w-full py-2.5 px-3 rounded-2xl bg-gradient-earth text-white font-bold text-xs shadow-clay-button hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        <span>Baca & Klaim +{mission.reward_points} Daun</span>
+                      </button>
+                    </div>
+                  ) : mission.id === 'explore_market' && !isClaimed ? (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => handleClaimDaily(mission.id, 'navigate')}
+                        disabled={isLoading}
+                        className="w-full py-2.5 px-3 rounded-2xl bg-gradient-earth text-white font-bold text-xs shadow-clay-button hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Klaim +{mission.reward_points} Daun</span>
+                      </button>
+                      <Link
+                        href="/market"
+                        className="w-full text-center block text-[11px] font-bold text-[#357A59] hover:underline"
+                      >
+                        Kunjungi Market →
+                      </Link>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleClaimDaily(mission.id, mission.action_type)}
+                      disabled={isClaimed || isLoading}
+                      className={`w-full py-2.5 px-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+                        isClaimed
+                          ? 'bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/30 cursor-default'
+                          : 'bg-gradient-earth text-white shadow-clay-button hover:scale-[1.02] active:scale-95 cursor-pointer'
+                      }`}
+                    >
+                      {isClaimed ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Telah Diklaim Hari Ini</span>
+                        </>
+                      ) : isLoading ? (
+                        <span>Memproses Klaim...</span>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 text-[#FF9E20]" />
+                          <span>Klaim +{mission.reward_points} Daun</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Gamified Daily & Weekly Eco Quests */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -302,6 +502,61 @@ export default function EcoQuestsAndForest() {
               className="w-full py-3 rounded-full bg-[#1A4D3A] text-white font-bold text-xs shadow-clay-button hover:bg-[#357A59] transition-all cursor-pointer"
             >
               Tutup Sertifikat
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Eco Tip Education Modal */}
+      {activeTipModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#FAF8F5] rounded-[32px] max-w-lg w-full p-6 sm:p-8 shadow-clay-card border border-white space-y-5 relative text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#E8F2ED] text-[#357A59] flex items-center justify-center text-2xl shadow-clay-sm">
+                💡
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#357A59] bg-[#E8F2ED] px-2.5 py-0.5 rounded-full">
+                  Edukasi 1 Menit BumiKita
+                </span>
+                <h3 className="text-lg font-black text-[#1A4D3A] pt-1">
+                  Cara Memilah Plastik & Kardus Sebelum Upcycle
+                </h3>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs text-[#1A4D3A]">
+              <div className="p-3.5 rounded-2xl bg-white shadow-clay-sm border border-[#1A4D3A]/5 space-y-1">
+                <span className="font-extrabold text-[#357A59]">1. Bilas & Keringkan Botol PET</span>
+                <p className="text-[#1A4D3A]/75">
+                  Sisa cairan manis atau minyak menurunkan daya rekat lem dan memicu jamur saat proses kreasi kerajinan.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-white shadow-clay-sm border border-[#1A4D3A]/5 space-y-1">
+                <span className="font-extrabold text-[#357A59]">2. Pisahkan Tutup HDPE dari Botol</span>
+                <p className="text-[#1A4D3A]/75">
+                  Tutup botol memiliki titik leleh lebih rendah dan sangat ideal untuk dilelehkan menjadi tatakan gelas tahan panas.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-white shadow-clay-sm border border-[#1A4D3A]/5 space-y-1">
+                <span className="font-extrabold text-[#357A59]">3. Lipat Kardus Tanpa Lakban Plastik</span>
+                <p className="text-[#1A4D3A]/75">
+                  Lepas pita perekat plastik terlebih dahulu sebelum memotong pola kotak organizer atau lampu tidur skandinavia.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setActiveTipModal(false)}
+              className="w-full py-3 rounded-full bg-gradient-earth text-white font-bold text-xs shadow-clay-button hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
+            >
+              Saya Mengerti & Tutup Edukasi
             </button>
           </div>
         </div>
