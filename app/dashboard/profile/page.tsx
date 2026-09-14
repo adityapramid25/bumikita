@@ -4,10 +4,10 @@ import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/src/context/AuthContext';
 import UserProfileCard from '@/src/components/auth/UserProfileCard';
-import { ArrowLeft, ShieldCheck, MapPin, Sparkles, User, LogIn, Leaf, TreePine } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, MapPin, Sparkles, User, LogIn, Leaf, TreePine, LogOut } from 'lucide-react';
 
 export default function UserProfileDashboardPage() {
-  const { user, profile, isLoading, isConfigured, openAuthModal } = useAuth();
+  const { user, profile, isLoading, isConfigured, openAuthModal, signOut } = useAuth();
 
   return (
     <div className="min-h-screen bg-[#F5F2ED] py-8 sm:py-12 px-4 sm:px-6">
@@ -32,12 +32,23 @@ export default function UserProfileDashboardPage() {
 
           <div className="flex items-center gap-2">
             <Link
+              id="btn-dashboard-profile-return-home"
               href="/"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FAF8F5] text-xs font-extrabold text-[#1A4D3A] shadow-clay-pill border border-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5 text-[#357A59]" />
-              <span>Kembali</span>
+              <span>Kembali ke Beranda</span>
             </Link>
+            {user && (
+              <button
+                id="btn-dashboard-profile-logout"
+                onClick={() => signOut()}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FAF8F5] text-xs font-extrabold text-[#DC2626] border border-white shadow-clay-pill hover:bg-[#FDF2F2] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Keluar</span>
+              </button>
+            )}
           </div>
         </div>
 

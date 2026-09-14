@@ -4,10 +4,10 @@ import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/src/context/AuthContext';
 import UserProfileCard from '@/src/components/auth/UserProfileCard';
-import { ArrowLeft, UserCheck, LogIn, Sparkles } from 'lucide-react';
+import { ArrowLeft, LogOut, LogIn, Sparkles } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, signOut } = useAuth();
 
   if (isLoading) {
     return (
@@ -24,18 +24,23 @@ export default function ProfilePage() {
         {/* Breadcrumb / Top Bar */}
         <div className="flex items-center justify-between">
           <Link
+            id="btn-profile-return-home"
             href="/"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FAF8F5] text-xs font-extrabold text-[#1A4D3A] shadow-clay-pill border border-white hover:scale-105 active:scale-95 transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FAF8F5] text-xs font-extrabold text-[#1A4D3A] shadow-clay-pill border border-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-[#357A59]" />
             <span>Kembali ke Beranda</span>
           </Link>
 
           {user && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EBF4EE] text-xs font-bold text-[#357A59] border border-white shadow-clay-sm">
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Akun Aktif</span>
-            </div>
+            <button
+              id="btn-profile-logout"
+              onClick={() => signOut()}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FAF8F5] text-xs font-extrabold text-[#DC2626] border border-white shadow-clay-pill hover:bg-[#FDF2F2] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Keluar</span>
+            </button>
           )}
         </div>
 

@@ -290,22 +290,6 @@ export default function AuthCard({
 
   return (
     <div className="relative w-full max-w-lg mx-auto">
-      {/* Floating Illustrative Pill Badge Above Card */}
-      <motion.div
-        initial={{ y: -8, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="flex justify-center mb-4"
-      >
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#EBF4EE] border border-white text-[#357A59] text-xs font-extrabold shadow-clay-sm">
-          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#357A59] text-white">
-            <Leaf className="w-3 h-3" />
-          </span>
-          <span>Gabung 1.400+ Pejuang Bumi</span>
-          <span className="w-2 h-2 rounded-full bg-[#6DB677] animate-pulse" />
-        </div>
-      </motion.div>
-
       {/* Main Centered Tactile Clay Card */}
       <div className="relative clay-card p-6 sm:p-10 border border-white/80 overflow-hidden">
         {/* Top Subtle Ambient Glow */}

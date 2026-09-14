@@ -9,10 +9,8 @@ import {
   Camera,
   Check,
   AlertCircle,
-  LogOut,
   TreePine,
   ShieldCheck,
-  Database,
   Mail,
   Phone,
   Save,
@@ -439,29 +437,10 @@ function UserProfileForm({ initialProfile, email, userId }: UserProfileFormProps
 }
 
 export default function UserProfileCard() {
-  const { user, profile, isConfigured, signOut } = useAuth();
+  const { user, profile } = useAuth();
 
   return (
     <div className="relative w-full max-w-xl mx-auto space-y-6">
-      {/* Top Supabase Status Badge */}
-      <div className="flex items-center justify-between gap-2 px-1">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#EBF4EE] border border-white text-[#357A59] text-xs font-bold shadow-clay-sm">
-          <Database className="w-3.5 h-3.5" />
-          <span>
-            {isConfigured ? 'Terhubung ke Supabase PostgreSQL' : 'Supabase Integration Ready'}
-          </span>
-          <span className="w-2 h-2 rounded-full bg-[#6DB677] animate-pulse" />
-        </div>
-
-        <button
-          onClick={() => signOut()}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FAF8F5] text-xs font-bold text-[#DC2626] border border-white shadow-clay-sm hover:bg-[#FDF2F2] transition-colors cursor-pointer"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>Keluar</span>
-        </button>
-      </div>
-
       {/* Render the form keyed by user/profile so state mounts cleanly without side effects */}
       <UserProfileForm
         key={profile?.id || user?.id || 'profile-form'}
