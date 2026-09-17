@@ -22,10 +22,10 @@ import {
 const NAV_LINKS = [
   { href: '/', label: 'Beranda', icon: Home },
   { href: '/market', label: 'Market', icon: ShoppingBag },
-  { href: '/scanner', label: 'AI Scanner', icon: Sparkles },
+  { href: '/scanner', label: 'AI Scanner', icon: Sparkles, badge: 'AI' },
   { href: '/community', label: 'Community', icon: Users },
   { href: '/quests', label: 'Hutan & Quest', icon: TreePine },
-  { href: '/dropoff', label: 'Drop-off Map', icon: MapPin },
+  { href: '/dropoff', label: 'Drop-off', icon: MapPin },
 ];
 
 export default function Navbar() {
@@ -64,9 +64,11 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full max-w-[100vw] overflow-x-hidden bg-[#F5F2ED] border-b border-[#1A4D3A]/10 px-3.5 py-2.5 sm:px-6 sm:py-3 transition-colors">
-      <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
-        {/* Left Section (Brand & Logo) */}
+    <header className="sticky top-0 z-40 w-full max-w-[100vw] overflow-x-hidden bg-[#F5F2ED] border-b border-[#1A4D3A]/10 pt-4 pb-3 sm:pt-5 sm:pb-4 lg:py-3.5 px-4 sm:px-6 transition-colors">
+      <div className="w-full max-w-7xl mx-auto flex flex-col gap-3 sm:gap-3.5 lg:gap-0">
+        {/* Top Row: Brand & Actions */}
+        <div className="w-full flex items-center justify-between gap-2 sm:gap-4">
+          {/* Left Section (Brand & Logo) */}
         <Link 
           href="/"
           className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group select-none shrink-0"
@@ -97,14 +99,21 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition-all relative ${
+                className={`flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 min-h-[38px] sm:min-h-[42px] rounded-full text-xs sm:text-sm font-semibold tracking-wide transition-all relative ${
                   active
                     ? 'bg-gradient-earth text-white shadow-clay-button scale-[1.02]'
                     : 'text-[#1A4D3A]/80 hover:text-[#1A4D3A] hover:bg-[#EAE5DC]/60'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="w-4 h-4 shrink-0" />
                 <span>{link.label}</span>
+                {link.badge && (
+                  <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded-md leading-none tracking-wider shadow-xs ${
+                    active ? 'bg-amber-400 text-emerald-950' : 'bg-amber-500 text-white'
+                  }`}>
+                    {link.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -238,9 +247,9 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Sub-Navigation Bar */}
-      <div className="w-full max-w-full overflow-x-hidden pt-2 pb-0.5">
-        <div className="flex lg:hidden overflow-x-auto gap-1.5 no-scrollbar text-xs w-full max-w-full">
+      {/* Mobile Sub-Navigation Bar (Bottom Row) */}
+      <nav className="w-full max-w-full overflow-x-hidden lg:hidden">
+        <div className="flex overflow-x-auto gap-2 sm:gap-2.5 no-scrollbar w-full max-w-full px-0.5 py-0.5">
           {NAV_LINKS.map((link) => {
             const active = isActive(link.href);
             const Icon = link.icon;
@@ -248,19 +257,27 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold transition-all ${
+                className={`flex-shrink-0 flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[42px] sm:min-h-[46px] rounded-2xl text-xs sm:text-sm font-semibold tracking-wide transition-all select-none ${
                   active
-                    ? 'bg-gradient-earth text-white shadow-sm'
-                    : 'bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-pill border border-white/70'
+                    ? 'bg-gradient-earth text-white shadow-clay-btn'
+                    : 'bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-card border border-white/80 hover:bg-white active:scale-98'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="w-4 h-4 shrink-0" />
                 <span>{link.label}</span>
+                {link.badge && (
+                  <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded-md leading-none tracking-wider shadow-xs ${
+                    active ? 'bg-amber-400 text-emerald-950' : 'bg-amber-500 text-white'
+                  }`}>
+                    {link.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
         </div>
-      </div>
-    </header>
+      </nav>
+    </div>
+  </header>
   );
 }

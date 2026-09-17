@@ -231,13 +231,15 @@ export interface Workshop {
 export interface DropoffLocation {
   id: string;
   name: string;
-  type: 'Campus Drop Box' | 'Smart Reverse Vending' | 'Community Waste Hub' | 'Refill Station';
+  type: string;
+  category?: string;
   address: string;
-  city: 'Jakarta' | 'Bandung' | 'Yogyakarta' | 'Surabaya' | 'Bali';
+  city: string;
   distanceKm: number;
   acceptedMaterials: string[];
   hours: string;
   pointsPerKg: number;
   verifiedPartner: boolean;
-  status: 'Open' | 'Crowded' | 'Full Today';
+  status: string;
+  googleMapsUrl?: string;
 }
