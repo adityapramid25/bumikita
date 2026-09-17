@@ -234,10 +234,39 @@ export async function createCommunityPost(params: {
 
   const supabase = createClient();
   try {
+    // 1. Verify active session to ensure authenticated request with valid JWT
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // Use session user ID if available to guarantee auth.uid() == user_id in RLS policy
+    const activeUserId = session?.user?.id || userId;
+
+    if (!session?.user) {
+      return {
+        success: false,
+        error: 'Sesi masuk Anda telah kedaluwarsa atau belum terverifikasi. Silakan masuk kembali.',
+      };
+    }
+
+    // 2. Ensure author row exists in public.profiles to satisfy Foreign Key constraints
+    try {
+      await supabase.from('profiles').upsert(
+        {
+          id: activeUserId,
+          full_name: authorProfile?.full_name || session.user.user_metadata?.full_name || 'Eco Warrior',
+          nickname: authorProfile?.username || session.user.user_metadata?.nickname || `eco_${activeUserId.slice(0, 6)}`,
+          role: authorProfile?.role || 'Eco Warrior',
+        },
+        { onConflict: 'id', ignoreDuplicates: true }
+      );
+    } catch (upsertErr) {
+      console.warn('Profile sync notice before post insert:', upsertErr);
+    }
+
+    // 3. Insert new post into public.posts
     const { data, error } = await supabase
       .from('posts')
       .insert({
-        user_id: userId,
+        user_id: activeUserId,
         content: content.trim(),
         image_url: imageUrl?.trim() || null,
       })
@@ -246,14 +275,20 @@ export async function createCommunityPost(params: {
 
     if (error) {
       console.error('Supabase insert post failed:', error.message);
+      if (error.message.includes('row-level security') || error.code === '42501') {
+        return {
+          success: false,
+          error: 'Izin posting ditolak oleh sistem keamanan (RLS). Pastikan Anda telah masuk dengan akun yang valid.',
+        };
+      }
       return { success: false, error: error.message };
     }
 
-    // Resolve author profile
+    // 4. Resolve author profile for optimistic UI
     let resolvedProfile: CommunityProfile = authorProfile || {
-      id: userId,
+      id: activeUserId,
       full_name: 'Eco Warrior',
-      username: `eco_${userId.slice(0, 6)}`,
+      username: `eco_${activeUserId.slice(0, 6)}`,
       role: 'Eco Warrior',
       avatar_url: null,
     };
@@ -262,7 +297,7 @@ export async function createCommunityPost(params: {
       const { data: profData } = await supabase
         .from('profiles')
         .select('id, full_name, username, role, avatar_url')
-        .eq('id', userId)
+        .eq('id', activeUserId)
         .single();
       if (profData) {
         resolvedProfile = profData;
@@ -303,12 +338,19 @@ export async function togglePostLike(
 
   const supabase = createClient();
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      return { success: false, isLiked: currentlyLiked, error: 'Silakan masuk terlebih dahulu untuk menyukai postingan.' };
+    }
+
+    const activeUserId = session.user.id || userId;
+
     if (currentlyLiked) {
       // Live delete from public.likes
       const { error } = await supabase
         .from('likes')
         .delete()
-        .match({ post_id: postId, user_id: userId });
+        .match({ post_id: postId, user_id: activeUserId });
 
       if (error) throw error;
       return { success: true, isLiked: false };
@@ -316,7 +358,7 @@ export async function togglePostLike(
       // Live insert into public.likes
       const { error } = await supabase
         .from('likes')
-        .insert({ post_id: postId, user_id: userId });
+        .insert({ post_id: postId, user_id: activeUserId });
 
       if (error) throw error;
       return { success: true, isLiked: true };
@@ -347,11 +389,36 @@ export async function createCommunityComment(params: {
 
   const supabase = createClient();
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      return {
+        success: false,
+        error: 'Sesi masuk Anda telah kedaluwarsa. Silakan masuk kembali untuk berkomentar.',
+      };
+    }
+
+    const activeUserId = session.user.id || userId;
+
+    // Ensure author row exists in public.profiles to satisfy Foreign Key constraints
+    try {
+      await supabase.from('profiles').upsert(
+        {
+          id: activeUserId,
+          full_name: authorProfile?.full_name || session.user.user_metadata?.full_name || 'Eco Warrior',
+          nickname: authorProfile?.username || session.user.user_metadata?.nickname || `eco_${activeUserId.slice(0, 6)}`,
+          role: authorProfile?.role || 'Eco Warrior',
+        },
+        { onConflict: 'id', ignoreDuplicates: true }
+      );
+    } catch (upsertErr) {
+      console.warn('Profile sync notice before comment insert:', upsertErr);
+    }
+
     const { data, error } = await supabase
       .from('comments')
       .insert({
         post_id: postId,
-        user_id: userId,
+        user_id: activeUserId,
         content: content.trim(),
       })
       .select('id, post_id, user_id, content, created_at')
@@ -359,13 +426,19 @@ export async function createCommunityComment(params: {
 
     if (error) {
       console.error('Supabase insert comment error:', error.message);
+      if (error.message.includes('row-level security') || error.code === '42501') {
+        return {
+          success: false,
+          error: 'Izin komentar ditolak oleh sistem keamanan (RLS). Pastikan Anda telah masuk dengan akun yang valid.',
+        };
+      }
       return { success: false, error: error.message };
     }
 
     let resolvedProfile: CommunityProfile = authorProfile || {
-      id: userId,
+      id: activeUserId,
       full_name: 'Eco Warrior',
-      username: `eco_${userId.slice(0, 6)}`,
+      username: `eco_${activeUserId.slice(0, 6)}`,
       role: 'Eco Warrior',
       avatar_url: null,
     };
@@ -374,7 +447,7 @@ export async function createCommunityComment(params: {
       const { data: profData } = await supabase
         .from('profiles')
         .select('id, full_name, username, role, avatar_url')
-        .eq('id', userId)
+        .eq('id', activeUserId)
         .single();
       if (profData) {
         resolvedProfile = profData;

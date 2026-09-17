@@ -1,5 +1,5 @@
-import { createBrowserClient } from '@supabase/ssr';
-import { SupabaseClient } from '@supabase/supabase-js';
+import { getSupabase as getSharedClient, isSupabaseConfigured as checkConfigured } from '@/src/lib/supabase/client';
+import { createClient as createClientJs, SupabaseClient } from '@supabase/supabase-js';
 
 // Types for the Community feature
 export interface CommunityProfile {
@@ -39,33 +39,34 @@ export interface CommunityPostItem {
   comments?: CommunityComment[];
 }
 
-let browserClient: SupabaseClient | null = null;
+let fallbackClient: SupabaseClient | null = null;
 
 /**
  * Checks if Supabase URL and Anon Key are configured in the environment.
  */
 export function isSupabaseConfigured(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return Boolean(url && key && url.startsWith('http'));
+  return checkConfigured();
 }
 
 /**
- * Creates or retrieves a Supabase Browser Client initialized with @supabase/ssr.
+ * Returns the unified shared Supabase client initialized with auth session persistence.
+ * Uses the shared client instance from @/src/lib/supabase/client so that user authentication
+ * tokens and sessions are automatically attached to all database operations.
  */
 export function createClient(): SupabaseClient {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
-
-  if (typeof window === 'undefined') {
-    return createBrowserClient(supabaseUrl, supabaseAnonKey);
+  const shared = getSharedClient();
+  if (shared) {
+    return shared;
   }
 
-  if (!browserClient) {
-    browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
+  // Fallback if not configured or during SSR
+  if (!fallbackClient) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+    fallbackClient = createClientJs(supabaseUrl, supabaseAnonKey);
   }
 
-  return browserClient;
+  return fallbackClient;
 }
 
 /**
