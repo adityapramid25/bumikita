@@ -51,7 +51,7 @@ export default function PrivacyPolicyPage() {
 
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Sticky Tactile Header Bar with Back Button */}
-        <header className="sticky top-4 z-40 flex items-center justify-between p-3 sm:p-4 rounded-3xl bg-[#FAF8F5]/90 backdrop-blur-md border border-white shadow-clay-card">
+        <header className="sticky top-4 z-40 flex items-center justify-between p-3 sm:p-4 rounded-3xl bg-[#FAF8F5] border border-white shadow-clay-card">
           <div className="flex items-center gap-3">
             <button
               id="btn-privacy-back"

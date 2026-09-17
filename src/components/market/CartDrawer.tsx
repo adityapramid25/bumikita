@@ -101,7 +101,7 @@ export default function CartDrawer() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/50 animate-in fade-in duration-200">
       <div 
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md bg-[#FAF8F5] h-full shadow-2xl flex flex-col justify-between p-6 overflow-y-auto relative animate-in slide-in-from-right duration-300 border-l border-white"

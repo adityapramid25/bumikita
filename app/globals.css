@@ -212,4 +212,67 @@
   transition: transform 0.15s ease;
 }
 
+/* ==========================================================================
+   MOBILE & LOW-END HARDWARE PERFORMANCE OPTIMIZATIONS
+   Eliminates GPU rasterization chokes, frame drops, and input latency
+   ========================================================================== */
+
+/* Offscreen feed cards & product listings containment */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 400px;
+}
+
+/* Isolated GPU rendering layer */
+.gpu-layer {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+@media (max-width: 768px) {
+  /* 1. Purge expensive backdrop-blur filters on mobile screens */
+  [class*="backdrop-blur"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* 2. Replace multi-layered inset/spread clay shadows with high-performance single/dual layer shadows */
+  .clay-card,
+  .shadow-clay-card {
+    box-shadow: 0 4px 12px rgba(26, 77, 58, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  .clay-button,
+  .shadow-clay-button,
+  .shadow-clay-btn {
+    box-shadow: 0 4px 10px rgba(53, 122, 89, 0.2) !important;
+  }
+
+  .clay-inset,
+  .shadow-clay-inset {
+    box-shadow: inset 0 2px 4px rgba(26, 77, 58, 0.06) !important;
+  }
+
+  .shadow-clay-sm,
+  .shadow-clay-pill {
+    box-shadow: 0 2px 6px rgba(26, 77, 58, 0.05) !important;
+  }
+
+  .shadow-clay-green {
+    box-shadow: 0 4px 12px rgba(53, 122, 89, 0.2) !important;
+  }
+
+  .shadow-clay-orange {
+    box-shadow: 0 4px 12px rgba(255, 158, 32, 0.2) !important;
+  }
+
+  /* 3. Disable continuous pulse/ping/bounce keyframe animations on mobile to prevent constant repaints */
+  .animate-ping,
+  .animate-pulse,
+  .animate-bounce {
+    animation: none !important;
+  }
+}
+
+
 

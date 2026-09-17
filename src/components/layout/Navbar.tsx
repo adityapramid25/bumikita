@@ -63,7 +63,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full max-w-full bg-[#F5F2ED]/95 backdrop-blur-md border-b border-[#1A4D3A]/10 px-4 py-3 sm:px-6 sm:py-4 transition-all">
+    <header className="sticky top-0 z-40 w-full max-w-full bg-[#F5F2ED] border-b border-[#1A4D3A]/10 px-4 py-3 sm:px-6 sm:py-4 transition-colors">
       <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
         {/* Left Section (Brand & Logo) */}
         <Link 
@@ -73,7 +73,7 @@ export default function Navbar() {
           {/* Logo Container */}
           <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-earth p-0.5 shadow-clay-green flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95 shrink-0">
             <div className="w-full h-full bg-[#FAF8F5] rounded-[14px] flex items-center justify-center text-[#1A4D3A]">
-              <Leaf className="w-6 h-6 text-[#357A59] fill-[#6DB677]/40 animate-pulse" />
+              <Leaf className="w-6 h-6 text-[#357A59] fill-[#6DB677]/40" />
             </div>
           </div>
 

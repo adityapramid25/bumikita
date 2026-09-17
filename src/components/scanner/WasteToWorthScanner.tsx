@@ -739,7 +739,7 @@ export default function WasteToWorthScanner() {
                   {/* Scanner Grid Overlay */}
                   <div className="absolute inset-0 pointer-events-none border-[16px] border-black/20 rounded-3xl flex items-center justify-center">
                     <div className="w-48 h-48 sm:w-64 sm:h-64 border-2 border-dashed border-white/70 rounded-2xl animate-pulse flex items-center justify-center">
-                      <span className="text-[11px] font-bold text-white bg-black/40 px-2.5 py-1 rounded-full backdrop-blur-sm">
+                      <span className="text-[11px] font-bold text-white bg-black/70 px-2.5 py-1 rounded-full">
                         Posisikan Sampah di Sini
                       </span>
                     </div>
@@ -751,7 +751,7 @@ export default function WasteToWorthScanner() {
                       <button
                         type="button"
                         onClick={toggleCameraFacing}
-                        className="w-11 h-11 rounded-2xl bg-black/40 text-white backdrop-blur-md border border-white/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                        className="w-11 h-11 rounded-2xl bg-black/60 text-white border border-white/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer"
                         title="Putar Kamera"
                       >
                         <SwitchCamera className="w-5 h-5" />
@@ -773,7 +773,7 @@ export default function WasteToWorthScanner() {
                     <button
                       type="button"
                       onClick={stopCamera}
-                      className="w-11 h-11 rounded-2xl bg-black/40 text-white backdrop-blur-md border border-white/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                      className="w-11 h-11 rounded-2xl bg-black/60 text-white border border-white/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer"
                       title="Tutup Kamera"
                     >
                       <X className="w-5 h-5" />
@@ -794,14 +794,14 @@ export default function WasteToWorthScanner() {
                     <button
                       type="button"
                       onClick={() => setSelectedImage(null)}
-                      className="p-2 rounded-xl bg-black/50 text-white backdrop-blur-md hover:bg-black/70 active:scale-95 transition-all cursor-pointer"
+                      className="p-2 rounded-xl bg-black/70 text-white hover:bg-black/90 active:scale-95 transition-all cursor-pointer"
                       title="Hapus Foto"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
 
-                  <div className="absolute bottom-3 left-3 bg-[#FAF8F5]/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-bold text-[#1A4D3A] shadow-sm flex items-center gap-1.5">
+                  <div className="absolute bottom-3 left-3 bg-[#FAF8F5] px-3 py-1.5 rounded-full text-xs font-bold text-[#1A4D3A] shadow-sm flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-[#357A59]" />
                     <span>Foto Siap Dianalisis</span>
                   </div>
@@ -1039,9 +1039,9 @@ export default function WasteToWorthScanner() {
                               transition={{ duration: 0.25 }}
                               className="absolute top-3 left-3 z-20 flex items-center gap-2"
                             >
-                              <div className="flex items-center gap-2 bg-[#1D2128]/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 shadow-lg text-white">
+                              <div className="flex items-center gap-2 bg-[#1D2128]/95 px-3.5 py-1.5 rounded-full border border-white/20 shadow-lg text-white">
                                 <span className="relative flex h-2.5 w-2.5">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#6DB677] opacity-75"></span>
+                                  <span className="md:animate-ping absolute inline-flex h-full w-full rounded-full bg-[#6DB677] opacity-75"></span>
                                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#6DB677]"></span>
                                 </span>
                                 <span className="text-[11px] sm:text-xs font-bold tracking-wide">
@@ -1049,7 +1049,7 @@ export default function WasteToWorthScanner() {
                                 </span>
                               </div>
 
-                              <div className="hidden xs:flex items-center gap-1.5 bg-[#215E61]/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#6DB677]/30 text-[10px] sm:text-[11px] font-semibold text-[#E8F2ED] shadow-sm">
+                              <div className="hidden xs:flex items-center gap-1.5 bg-[#215E61]/95 px-2.5 py-1 rounded-full border border-[#6DB677]/30 text-[10px] sm:text-[11px] font-semibold text-[#E8F2ED] shadow-sm">
                                 <CheckCircle2 className="w-3 h-3 text-[#6DB677]" />
                                 <span>AI Vision</span>
                               </div>
@@ -1063,7 +1063,7 @@ export default function WasteToWorthScanner() {
                               transition={{ duration: 0.3, ease: 'easeOut' }}
                               className="absolute bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 z-20"
                             >
-                              <div className="p-3.5 sm:p-4 rounded-2xl bg-neutral-900/85 backdrop-blur-md border border-white/15 shadow-xl text-white">
+                              <div className="p-3.5 sm:p-4 rounded-2xl bg-neutral-900/95 border border-white/15 shadow-xl text-white">
                                 {/* 1. Header Row: Brand Badge & Scrap Value */}
                                 <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-white/10">
                                   <div className="flex items-center gap-2">
@@ -1475,7 +1475,7 @@ export default function WasteToWorthScanner() {
 
       {/* ================= MODAL: SHARE TO COMMUNITY ================= */}
       {isShareModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-[#FAF8F5] max-w-lg w-full rounded-3xl p-6 shadow-2xl border border-white space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-[#1A4D3A]/10 pb-3">
               <h3 className="text-base font-extrabold text-[#1A4D3A] flex items-center gap-2">

@@ -27,7 +27,7 @@ export default function CuratedShowcase() {
           <div
             key={item.id}
             onClick={() => setSelectedProductModal(item)}
-            className="clay-card p-4 flex flex-col justify-between hover:-translate-y-1 transition-all duration-200 cursor-pointer group"
+            className="clay-card p-4 flex flex-col justify-between hover:-translate-y-1 transition-all duration-200 cursor-pointer group content-auto"
           >
             {/* Thumbnail */}
             <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-[#EAE5DC] mb-3.5 shadow-clay-inset">
@@ -35,9 +35,11 @@ export default function CuratedShowcase() {
               <img
                 src={item.image}
                 alt={item.name}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
-              <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-[#FAF8F5]/90 text-[10px] font-bold text-[#1A4D3A] backdrop-blur-sm shadow-sm">
+              <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-[#FAF8F5] text-[10px] font-bold text-[#1A4D3A] shadow-sm">
                 Siswa SMK
               </span>
             </div>

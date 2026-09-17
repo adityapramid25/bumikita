@@ -112,7 +112,10 @@ export default function EcoAIAssistant() {
   return (
     <>
       {/* Floating Trigger Button & Micro Speech Tooltip */}
-      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end">
+      <div 
+        className="fixed bottom-6 right-6 z-40 flex flex-col items-end gpu-layer"
+        style={{ transform: 'translateZ(0)' }}
+      >
         {/* Speech Tooltip */}
         {showTooltip && !isOpen && (
           <div 
@@ -131,12 +134,12 @@ export default function EcoAIAssistant() {
           }}
           className="group relative flex items-center gap-2.5 px-4 sm:px-5 py-3.5 rounded-full bg-gradient-earth text-white font-extrabold text-xs sm:text-sm shadow-clay-green hover:scale-105 active:scale-95 transition-all cursor-pointer border-2 border-white/80"
         >
-          {/* Subtle Animated Pulse Ring */}
-          <span className="absolute -inset-1 rounded-full bg-[#6DB677]/30 animate-ping pointer-events-none -z-10" />
+          {/* Subtle Animated Pulse Ring - Disabled on mobile */}
+          <span className="hidden md:inline absolute -inset-1 rounded-full bg-[#6DB677]/30 animate-ping pointer-events-none -z-10" />
 
           <div className="relative">
             <Bot className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#FF9E20] rounded-full border border-white animate-pulse" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#FF9E20] rounded-full border border-white md:animate-pulse" />
           </div>
           <span className="hidden sm:inline">Tanya EcoGenie AI</span>
           <span className="sm:hidden">Eco AI</span>
@@ -145,11 +148,14 @@ export default function EcoAIAssistant() {
 
       {/* Floating Chat Modal */}
       {isOpen && (
-        <div className="fixed bottom-24 right-4 sm:right-6 z-50 w-[92vw] max-w-sm sm:max-w-md bg-[#FAF8F5] rounded-[32px] shadow-2xl border border-white flex flex-col h-[520px] overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
+        <div 
+          className="fixed bottom-24 right-4 sm:right-6 z-50 w-[92vw] max-w-sm sm:max-w-md bg-[#FAF8F5] rounded-[32px] shadow-2xl border border-white flex flex-col h-[520px] overflow-hidden animate-in slide-in-from-bottom-5 duration-300 gpu-layer"
+          style={{ transform: 'translateZ(0)' }}
+        >
           {/* Header */}
           <div className="p-4 bg-gradient-earth text-white flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30">
+              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white border border-white/30">
                 <Leaf className="w-4 h-4" />
               </div>
               <div>

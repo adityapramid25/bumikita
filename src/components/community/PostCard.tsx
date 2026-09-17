@@ -272,6 +272,8 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
               <img
                 src={authorAvatar}
                 alt={authorName}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -325,6 +327,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
             alt="Foto karya upcycle komunitas"
             className="w-full max-h-96 object-cover hover:scale-[1.01] transition-transform duration-300"
             loading="lazy"
+            decoding="async"
           />
         </div>
       )}
@@ -442,6 +445,8 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                           <img
                             src={comment.profiles.avatar_url}
                             alt={cAuthorName}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover"
                           />
                         ) : (

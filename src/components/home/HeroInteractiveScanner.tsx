@@ -551,7 +551,7 @@ export default function HeroInteractiveScanner() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsDrawerOpen(false)}
-              className="fixed inset-0 bg-[#1A4D3A]/30 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/50"
             />
 
             <motion.div

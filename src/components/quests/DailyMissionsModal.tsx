@@ -137,7 +137,7 @@ export default function DailyMissionsModal() {
     <AnimatePresence>
       <div 
         id="modal-daily-missions-backdrop"
-        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/50 backdrop-blur-sm overflow-y-auto"
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 overflow-y-auto"
         onClick={() => setIsMissionsOpen(false)}
       >
         <motion.div
@@ -347,7 +347,7 @@ export default function DailyMissionsModal() {
         {/* Nested Eco Tip Education Modal */}
         {activeTipModal && (
           <div 
-            className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60"
             onClick={() => setActiveTipModal(false)}
           >
             <motion.div

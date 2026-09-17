@@ -190,7 +190,7 @@ export default function GreenMarket() {
               <div
                 key={product.id}
                 onClick={() => setSelectedProductModal(product)}
-                className="bg-[#FAF8F5] rounded-[28px] p-4 sm:p-5 shadow-clay-card border border-white hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col justify-between group"
+                className="bg-[#FAF8F5] rounded-[28px] p-4 sm:p-5 shadow-clay-card border border-white hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col justify-between group content-auto"
               >
                 {/* Product Image Container */}
                 <div className="relative w-full h-56 rounded-2xl overflow-hidden bg-[#EAE5DC] mb-4 shadow-clay-inset">
@@ -198,18 +198,20 @@ export default function GreenMarket() {
                   <img
                     src={product.image}
                     alt={product.name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
 
                   {/* Impact Floating Badge */}
-                  <div className="absolute top-3 left-3 bg-[#FAF8F5]/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-extrabold text-[#1A4D3A] shadow-sm flex items-center gap-1 border border-white/80">
+                  <div className="absolute top-3 left-3 bg-[#FAF8F5] px-2.5 py-1 rounded-full text-[10px] font-extrabold text-[#1A4D3A] shadow-sm flex items-center gap-1 border border-white/80">
                     <Droplet className="w-3 h-3 text-[#0284C7] fill-[#0284C7]" />
                     <span>Hemat {product.impactStats.waterSavedLiters?.toLocaleString('id-ID')}L Air</span>
                   </div>
 
                   {/* Student Verified Campus Badge */}
                   {product.seller.isVerifiedStudent && (
-                    <div className="absolute top-3 right-3 bg-[#1A4D3A]/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow-sm flex items-center gap-1">
+                    <div className="absolute top-3 right-3 bg-[#1A4D3A] px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow-sm flex items-center gap-1">
                       <GraduationCap className="w-3 h-3 text-[#6DB677]" />
                       <span>{product.seller.campusOrCity}</span>
                     </div>

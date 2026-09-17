@@ -36,7 +36,7 @@ export default function ProductModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
       <div 
         onClick={(e) => e.stopPropagation()}
         className="bg-[#FAF8F5] rounded-[32px] max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-clay-card border border-white p-6 sm:p-8 relative space-y-6"
@@ -59,7 +59,7 @@ export default function ProductModal() {
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute top-3 left-3 bg-[#FAF8F5]/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-[#1A4D3A] shadow-sm flex items-center gap-1.5 border border-white">
+              <div className="absolute top-3 left-3 bg-[#FAF8F5] px-3 py-1 rounded-full text-xs font-bold text-[#1A4D3A] shadow-sm flex items-center gap-1.5 border border-white">
                 <Leaf className="w-3.5 h-3.5 text-[#357A59]" />
                 <span>100% Upcycled Waste</span>
               </div>

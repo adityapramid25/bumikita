@@ -111,7 +111,7 @@ export default function RewardModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
       <div 
         onClick={(e) => e.stopPropagation()}
         className="bg-[#FAF8F5] rounded-[32px] max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-clay-card border border-white p-6 sm:p-8 relative space-y-6"

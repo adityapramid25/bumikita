@@ -150,7 +150,7 @@ export default function HeroSection() {
                 href="/quests"
                 className="bg-gradient-earth p-4 sm:p-5 rounded-2xl shadow-clay-green text-white hover:-translate-y-1 transition-all cursor-pointer group"
               >
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white mb-3 shadow-sm group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-white/25 border border-white/20 flex items-center justify-center text-white mb-3 shadow-sm group-hover:scale-110 transition-transform">
                   <TreePine className="w-5 h-5 fill-white" />
                 </div>
                 <h3 className="text-sm sm:text-base font-bold text-white leading-snug">

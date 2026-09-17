@@ -366,7 +366,7 @@ export default function MinimalScannerWidget() {
           {/* Backdrop */}
           <div
             onClick={() => setIsDrawerOpen(false)}
-            className="fixed inset-0 bg-[#1A4D3A]/30 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/50 transition-opacity"
           />
 
           {/* Drawer Panel */}

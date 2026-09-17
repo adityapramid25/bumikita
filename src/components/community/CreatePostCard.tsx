@@ -253,7 +253,7 @@ export default function CreatePostCard({ onPostCreated }: CreatePostCardProps) {
                   type="button"
                   id="btn-community-remove-photo"
                   onClick={handleRemovePhoto}
-                  className="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-black/60 hover:bg-black text-white shadow-md transition-all active:scale-95 cursor-pointer backdrop-blur-xs flex items-center justify-center z-10"
+                  className="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-black/70 hover:bg-black text-white shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center z-10"
                   title="Hapus foto terpilih"
                   aria-label="Hapus foto"
                 >
@@ -263,7 +263,7 @@ export default function CreatePostCard({ onPostCreated }: CreatePostCardProps) {
 
               {/* Subtle Loading Spinner / Overlay During Upload */}
               {isSubmitting && (
-                <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px] flex flex-col items-center justify-center text-white p-3 z-20">
+                <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white p-3 z-20">
                   <Loader2 className="w-7 h-7 animate-spin text-[#6DB677] mb-2" />
                   <span className="text-xs font-bold tracking-wide text-white drop-shadow-sm">
                     {statusMessage || 'Mengunggah foto...'}

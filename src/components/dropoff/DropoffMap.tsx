@@ -160,8 +160,8 @@ export default function DropoffMap() {
               {/* Simulated Visual Interactive Pin Map Card */}
               <div className="relative w-full h-60 rounded-2xl bg-gradient-to-br from-[#EAE5DC] via-[#E8F2ED] to-[#FAF8F5] shadow-clay-inset border border-white overflow-hidden p-6 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 bg-[#FAF8F5]/90 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-[#1A4D3A] shadow-sm">
-                    <span className="w-2 h-2 rounded-full bg-[#059669] animate-ping" />
+                  <div className="flex items-center gap-2 bg-[#FAF8F5] px-3 py-1.5 rounded-full text-xs font-bold text-[#1A4D3A] shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-[#059669] md:animate-ping" />
                     <span>Live Hub Status: {selectedLocation.status}</span>
                   </div>
                   <span className="text-xs font-mono font-bold text-[#1A4D3A]/70">
@@ -259,7 +259,7 @@ export default function DropoffMap() {
 
       {/* Deposit QR & Simulation Modal */}
       {depositModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div 
             onClick={(e) => e.stopPropagation()}
             className="bg-[#FAF8F5] rounded-[32px] max-w-md w-full p-6 sm:p-8 shadow-clay-card border border-white text-center space-y-5 relative"

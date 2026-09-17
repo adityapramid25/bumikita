@@ -449,7 +449,7 @@ export default function EcoQuestsAndForest() {
 
       {/* Tree Certificate Detail Modal */}
       {selectedTreeCert && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div 
             onClick={(e) => e.stopPropagation()}
             className="bg-[#FAF8F5] rounded-[32px] max-w-lg w-full p-6 sm:p-8 shadow-clay-card border border-white space-y-6 relative text-center"
@@ -501,7 +501,7 @@ export default function EcoQuestsAndForest() {
 
       {/* Eco Tip Education Modal */}
       {activeTipModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div 
             onClick={(e) => e.stopPropagation()}
             className="bg-[#FAF8F5] rounded-[32px] max-w-lg w-full p-6 sm:p-8 shadow-clay-card border border-white space-y-5 relative text-left"

@@ -10,7 +10,7 @@ export default function UserProfileDashboardPage() {
   const { user, profile, isLoading, isConfigured, openAuthModal, signOut } = useAuth();
 
   return (
-    <div className="min-h-screen bg-[#F5F2ED] pt-8 sm:pt-12 pb-16 px-4 sm:px-6">
+    <div className="min-h-screen bg-[#F5F2ED] pt-10 sm:pt-14 md:pt-16 pb-16 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Breadcrumb & Quick Actions Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">

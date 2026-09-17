@@ -102,7 +102,7 @@ export default function CommunityPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F2ED] pt-8 sm:pt-12 pb-16 px-3.5 sm:px-6">
+    <div className="min-h-screen bg-[#F5F2ED] pt-10 sm:pt-14 md:pt-16 pb-16 px-3.5 sm:px-6">
       <main className="max-w-xl mx-auto space-y-5">
         {/* 1. Minimalist Top Navigation Bar */}
         <header className="flex items-center justify-between pb-3.5 border-b border-[#1A4D3A]/10 mt-1 sm:mt-2">
@@ -187,11 +187,12 @@ export default function CommunityPage() {
             /* Live Posts Feed */
             <div className="space-y-3.5">
               {posts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  onPostUpdated={handlePostUpdated}
-                />
+                <div key={post.id} className="content-auto">
+                  <PostCard
+                    post={post}
+                    onPostUpdated={handlePostUpdated}
+                  />
+                </div>
               ))}
             </div>
           )}

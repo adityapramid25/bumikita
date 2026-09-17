@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
@@ -102,9 +102,21 @@ export default function AuthCard({
   const [forgotSuccess, setForgotSuccess] = useState(false);
   const [showGreenPrinciples, setShowGreenPrinciples] = useState(false);
 
-  // Helper validation
-  const isPasswordsMatch = regPassword.length > 0 && regPassword === regConfirmPassword;
-  const isPasswordMismatch = regConfirmPassword.length > 0 && regPassword !== regConfirmPassword;
+  // Debounced password match validation (250ms) to eliminate typing frame drops
+  const [debouncedMatchState, setDebouncedMatchState] = useState<{ match: boolean; mismatch: boolean }>({ match: false, mismatch: false });
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedMatchState({
+        match: regPassword.length > 0 && regConfirmPassword.length > 0 && regPassword === regConfirmPassword,
+        mismatch: regConfirmPassword.length > 0 && regPassword !== regConfirmPassword,
+      });
+    }, 250);
+    return () => clearTimeout(handler);
+  }, [regPassword, regConfirmPassword]);
+
+  const isPasswordsMatch = debouncedMatchState.match;
+  const isPasswordMismatch = debouncedMatchState.mismatch;
 
   // If user is already authenticated, render a focused status card so the page contains only auth actions
   if (user) {
@@ -313,7 +325,7 @@ export default function AuthCard({
           </p>
         </div>
 
-        {/* Top Segmented Switch Pill (Masuk / Daftar) with Liquid Layout Animation */}
+        {/* Top Segmented Switch Pill (Masuk / Daftar) with Instant Zero-Stutter Switching */}
         <div className="relative p-1.5 rounded-2xl bg-[#F5F2ED] shadow-clay-inset mb-6 flex items-center z-10">
           <button
             type="button"
@@ -323,16 +335,11 @@ export default function AuthCard({
               setSubmitSuccess(null);
             }}
             className={`relative flex-1 py-2.5 text-xs sm:text-sm font-extrabold rounded-xl transition-all z-10 cursor-pointer ${
-              mode === 'login' ? 'text-white' : 'text-[#1A4D3A]/70 hover:text-[#1A4D3A]'
+              mode === 'login' 
+                ? 'bg-gradient-earth text-white shadow-clay-green' 
+                : 'text-[#1A4D3A]/70 hover:text-[#1A4D3A]'
             }`}
           >
-            {mode === 'login' && (
-              <motion.div
-                layoutId="active-tab-indicator"
-                className="absolute inset-0 bg-gradient-earth rounded-xl shadow-clay-green -z-10"
-                transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-              />
-            )}
             <span>Masuk</span>
           </button>
 
@@ -344,16 +351,11 @@ export default function AuthCard({
               setSubmitSuccess(null);
             }}
             className={`relative flex-1 py-2.5 text-xs sm:text-sm font-extrabold rounded-xl transition-all z-10 cursor-pointer ${
-              mode === 'register' ? 'text-white' : 'text-[#1A4D3A]/70 hover:text-[#1A4D3A]'
+              mode === 'register' 
+                ? 'bg-gradient-earth text-white shadow-clay-green' 
+                : 'text-[#1A4D3A]/70 hover:text-[#1A4D3A]'
             }`}
           >
-            {mode === 'register' && (
-              <motion.div
-                layoutId="active-tab-indicator"
-                className="absolute inset-0 bg-gradient-earth rounded-xl shadow-clay-green -z-10"
-                transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-              />
-            )}
             <span>Daftar Akun Baru</span>
           </button>
         </div>
@@ -402,20 +404,13 @@ export default function AuthCard({
 
         {/* FORM CONTAINER */}
         <div className="relative z-10">
-          <AnimatePresence mode="wait">
-            {mode === 'login' ? (
-              /* ================= MODE MASUK (LOGIN) ================= */
-              <motion.form
-                key="login-form"
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 12 }}
-                transition={{ duration: 0.25 }}
-                onSubmit={handleLoginSubmit}
-                className="space-y-4"
-              >
-                {/* Field 1: Email / Username */}
-                <div className="space-y-1.5">
+          {/* ================= MODE MASUK (LOGIN) ================= */}
+          <form
+            onSubmit={handleLoginSubmit}
+            className={`space-y-4 ${mode === 'login' ? 'block animate-in fade-in duration-150' : 'hidden'}`}
+          >
+            {/* Field 1: Email / Username */}
+            <div className="space-y-1.5">
                   <label className="text-xs font-bold text-[#1A4D3A] flex items-center gap-1.5">
                     <span>Email atau Nama Pengguna</span>
                   </label>
@@ -547,17 +542,12 @@ export default function AuthCard({
                   </svg>
                   <span>Lanjutkan dengan Akun Google</span>
                 </motion.button>
-              </motion.form>
-            ) : (
-              /* ================= MODE DAFTAR (REGISTER) ================= */
-              <motion.form
-                key="register-form"
-                initial={{ opacity: 0, x: 12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -12 }}
-                transition={{ duration: 0.25 }}
+              </form>
+
+              {/* ================= MODE DAFTAR (REGISTER) ================= */}
+              <form
                 onSubmit={handleRegisterSubmit}
-                className="space-y-4"
+                className={`space-y-4 ${mode === 'register' ? 'block animate-in fade-in duration-150' : 'hidden'}`}
               >
                 {/* Field 1: Nama Lengkap */}
                 <div className="space-y-1.5">
@@ -836,9 +826,7 @@ export default function AuthCard({
                     <span>Daftar Cepat dengan Google</span>
                   </button>
                 </div>
-              </motion.form>
-            )}
-          </AnimatePresence>
+              </form>
         </div>
 
         {/* Footer Note */}
@@ -850,7 +838,7 @@ export default function AuthCard({
       {/* ================= MODAL: LUPA KATA SANDI ================= */}
       <AnimatePresence>
         {showForgotPassword && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-[#1A4D3A]/30 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-[#1A4D3A]/40">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -934,7 +922,7 @@ export default function AuthCard({
       {/* ================= MODAL: PRINSIP AKSI HIJAU ================= */}
       <AnimatePresence>
         {showGreenPrinciples && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-[#1A4D3A]/30 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-[#1A4D3A]/40">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
