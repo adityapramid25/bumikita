@@ -275,7 +275,7 @@ export default function HeroInteractiveScanner() {
   };
 
   return (
-    <section className="relative w-full pt-8 sm:pt-12 pb-12 sm:pb-16 px-4 sm:px-6 overflow-hidden">
+    <section className="relative w-full pt-12 sm:pt-16 pb-12 sm:pb-16 px-4 sm:px-6 overflow-hidden">
       {/* Subtle Ambient Clay Orbs for Depth */}
       <div className="absolute -top-16 -right-16 w-96 h-96 rounded-full bg-[#6DB677]/15 blur-3xl pointer-events-none -z-10" />
       <div className="absolute -bottom-16 -left-16 w-80 h-80 rounded-full bg-[#FF9E20]/10 blur-3xl pointer-events-none -z-10" />
@@ -286,19 +286,46 @@ export default function HeroInteractiveScanner() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
           {/* LEFT COLUMN (5 Cols): Punchy Value Proposition */}
-          <div className="lg:col-span-5 space-y-6 pt-1 sm:pt-2 lg:pt-[54px] pb-4 sm:pb-6 lg:pb-[56px]">
+          <div className="lg:col-span-5 pt-6 sm:pt-10 lg:pt-12 pb-4 sm:pb-6 relative">
+            {/* Soft Tactile Ambient Glow (Clean Depth) */}
+            <div className="absolute -top-12 -left-12 w-full h-full max-w-lg rounded-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-transparent to-transparent pointer-events-none -z-10" />
+
+            {/* Subtle Organic Floating Leaf Dots */}
+            <div className="absolute -top-3 right-4 sm:right-10 pointer-events-none select-none opacity-30 flex items-center gap-2 text-[#1A4D3A]">
+              <Leaf className="w-3.5 h-3.5 -rotate-12" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#1A4D3A]" />
+            </div>
+
             {/* Headline: Exactly 6 words */}
-            <h1 className="text-4xl sm:text-5xl lg:text-5xl font-black text-[#1A4D3A] tracking-tight leading-[1.08]">
-              Ubah Sampah Jadi Cuan & Karya.
+            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-moss-dark leading-[1.15] mb-4 relative">
+              Ubah Sampah Jadi Cuan &{' '}
+              <span className="relative inline-block text-[#357A59]">
+                Karya.
+                <svg
+                  className="absolute -bottom-1 sm:-bottom-2 left-0 w-full h-2.5 text-[#6DB677] overflow-visible pointer-events-none"
+                  viewBox="0 0 100 12"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  preserveAspectRatio="none"
+                >
+                  <path
+                    d="M3 8.5C25 3.5 65 3 97 7.5"
+                    stroke="#6DB677"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+              <Sparkles className="w-5 h-5 text-emerald-600 inline-block ml-1.5 -mt-2 animate-pulse" />
             </h1>
 
             {/* Sub-headline: Exactly 1 sentence */}
-            <p className="text-base sm:text-lg text-[#1A4D3A]/80 leading-relaxed max-w-lg">
+            <p className="text-base sm:text-lg text-[#1A4D3A]/80 leading-relaxed max-w-lg mb-8">
               Scan sampahmu dengan AI, hitung potensi keuntungan, dan jual langsung di Green Market.
             </p>
 
             {/* Dual Action Bar */}
-            <div className="flex flex-wrap items-center gap-3.5 pt-1">
+            <div className="flex flex-wrap items-center gap-3.5">
               <motion.button
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.96 }}
@@ -315,7 +342,7 @@ export default function HeroInteractiveScanner() {
               >
                 <Link
                   href="/market"
-                  className="px-6 py-3.5 rounded-full bg-[#FAF8F5] text-[#1A4D3A] text-sm sm:text-base font-bold shadow-clay-pill hover:bg-white transition-all flex items-center gap-2 group"
+                  className="px-6 py-3.5 rounded-full bg-[#FAF8F5] text-[#1A4D3A] border border-[#1A4D3A]/10 text-sm sm:text-base font-bold shadow-clay-pill hover:bg-white transition-all flex items-center gap-2 group"
                 >
                   <span>Jelajahi Produk</span>
                   <ArrowRight className="w-4 h-4 text-[#357A59] group-hover:translate-x-1 transition-transform" />
@@ -325,7 +352,12 @@ export default function HeroInteractiveScanner() {
           </div>
 
           {/* RIGHT COLUMN (7 Cols): 3D Tactile Eco-Device Scanner Card */}
-          <div className="lg:col-span-7 relative">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, ease: 'easeOut' }}
+            className="lg:col-span-7 relative mt-10 lg:mt-0"
+          >
             
             {/* Visual Floating Tag Stickers Tilted Around Scanner Box */}
             <motion.div
@@ -528,7 +560,7 @@ export default function HeroInteractiveScanner() {
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
