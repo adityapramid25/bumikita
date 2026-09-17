@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { 
@@ -16,7 +16,6 @@ import {
 import { CommunityPostItem, CommunityComment } from '@/src/lib/supabase';
 import { useAuth } from '@/src/context/AuthContext';
 import { togglePostLike, createCommunityComment, fetchPostComments } from '@/src/lib/communityService';
-import SharePostModal from '@/src/components/community/SharePostModal';
 
 interface PostCardProps {
   post: CommunityPostItem;
@@ -50,10 +49,32 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const { user, profile, openAuthModal } = useAuth();
   const router = useRouter();
 
-  // Reactive state with local interaction overrides
-  const [localLiked, setLocalLiked] = useState<boolean | null>(null);
-  const [likeDelta, setLikeDelta] = useState<number>(0);
-  const [isLiking, setIsLiking] = useState<boolean>(false);
+  // Strict Optimistic State Management for Like (resilient on mobile/low-end devices)
+  const [liked, setLiked] = useState<boolean>(Boolean(post.is_liked));
+  const [likesCount, setLikesCount] = useState<number>(post.likes_count || 0);
+  const [prevPostSync, setPrevPostSync] = useState({
+    id: post.id,
+    is_liked: post.is_liked,
+    likes_count: post.likes_count,
+  });
+
+  // Adjust state during render if post prop changes from parent feed refresh
+  if (
+    post.id !== prevPostSync.id ||
+    post.is_liked !== prevPostSync.is_liked ||
+    post.likes_count !== prevPostSync.likes_count
+  ) {
+    setPrevPostSync({
+      id: post.id,
+      is_liked: post.is_liked,
+      likes_count: post.likes_count,
+    });
+    setLiked(Boolean(post.is_liked));
+    setLikesCount(post.likes_count || 0);
+  }
+
+  const [isPending, setIsPending] = useState<boolean>(false);
+  const isLikingRef = useRef<boolean>(false);
 
   const [showComments, setShowComments] = useState<boolean>(false);
   const [liveComments, setLiveComments] = useState<CommunityComment[] | null>(null);
@@ -62,10 +83,8 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const [isSubmittingComment, setIsSubmittingComment] = useState<boolean>(false);
   const [isLoadingComments, setIsLoadingComments] = useState<boolean>(false);
 
-  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
-
-  const isLiked = localLiked !== null ? localLiked : Boolean(post.is_liked);
-  const likesCount = Math.max(0, (post.likes_count || 0) + likeDelta);
+  // Lightweight clipboard copy feedback state for devices without navigator.share
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
   
   // Combine initial post comments (or refreshed comments) with newly added ones
   const baseComments = liveComments !== null ? liveComments : (post.comments || []);
@@ -80,42 +99,48 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
     }
   };
 
-  // Handle Optimistic Like Toggle backed by live Supabase mutation
+  // Handle Optimistic Like Toggle with strict concurrency lock & rollback
   const handleToggleLike = async () => {
     if (!user) {
       handleUnauthenticatedRedirect('menyukai postingan ini');
       return;
     }
 
-    if (isLiking) return;
-    setIsLiking(true);
+    if (isPending || isLikingRef.current) return; // Prevent duplicate rapid taps
 
-    const prevLiked = isLiked;
-    const nextLiked = !prevLiked;
-    const prevDelta = likeDelta;
-    const nextDelta = nextLiked ? prevDelta + 1 : prevDelta - 1;
+    isLikingRef.current = true;
+    setIsPending(true);
 
-    setLocalLiked(nextLiked);
-    setLikeDelta(nextDelta);
+    const previousLiked = liked;
+    const previousCount = likesCount;
+
+    // Strict optimistic update
+    const nextLiked = !previousLiked;
+    const nextCount = previousLiked ? Math.max(0, previousCount - 1) : previousCount + 1;
+
+    setLiked(nextLiked);
+    setLikesCount(nextCount);
 
     try {
-      const res = await togglePostLike(post.id, user.id, prevLiked);
+      const res = await togglePostLike(post.id, user.id, previousLiked);
       if (!res.success) {
-        // Rollback on failure
-        setLocalLiked(prevLiked);
-        setLikeDelta(prevDelta);
-      } else if (onPostUpdated) {
+        throw new Error(res.error || 'Gagal mengubah status suka');
+      }
+      if (onPostUpdated) {
         onPostUpdated({
           ...post,
           is_liked: nextLiked,
-          likes_count: Math.max(0, (post.likes_count || 0) + nextDelta),
+          likes_count: nextCount,
         });
       }
-    } catch {
-      setLocalLiked(prevLiked);
-      setLikeDelta(prevDelta);
+    } catch (err) {
+      console.error('Like toggle failed, reverting optimistic state:', err);
+      // Revert on failure
+      setLiked(previousLiked);
+      setLikesCount(previousCount);
     } finally {
-      setIsLiking(false);
+      setIsPending(false);
+      isLikingRef.current = false;
     }
   };
 
@@ -186,9 +211,44 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
     }
   };
 
-  // Handle Opening Multi-Platform Interactive Share Modal
-  const handleOpenShareModal = () => {
-    setIsShareModalOpen(true);
+  // Handle Native OS Share Sheet (optimized for mobile & low-end devices)
+  const handleNativeShare = async () => {
+    const authorName = post.profiles?.full_name || 'Eco Warrior';
+    const snippet = post.content.length > 80 
+      ? `${post.content.slice(0, 80).trim()}...` 
+      : post.content.trim();
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://bumikita.id';
+    const postUrl = `${origin}/community#post-${post.id}`;
+    const title = `Aksi Hijau BumiKita oleh ${authorName}`;
+    const text = `${authorName} di BumiKita: "${snippet}" 🌿`;
+
+    // 1. Trigger lightweight native OS share sheet (WhatsApp, Instagram Stories, Telegram, X, etc.)
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title,
+          text,
+          url: postUrl,
+        });
+        return;
+      } catch (err: any) {
+        // User cancelled share sheet or dismissed dialog
+        if (err?.name === 'AbortError') {
+          return;
+        }
+      }
+    }
+
+    // 2. Fallback: Copy link to clipboard for desktop or unsupported browsers
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(postUrl);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2500);
+      }
+    } catch (copyErr) {
+      console.error('Clipboard copy failed:', copyErr);
+    }
   };
 
   const authorName = post.profiles?.full_name || 'Eco Warrior';
@@ -240,11 +300,11 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           </div>
         </div>
 
-        {/* Anchor link helper icon */}
+        {/* Anchor link helper button triggering native share */}
         <button
           type="button"
-          onClick={handleOpenShareModal}
-          className="text-[#1A4D3A]/40 hover:text-[#357A59] transition-colors p-1"
+          onClick={handleNativeShare}
+          className="text-[#1A4D3A]/40 hover:text-[#357A59] transition-colors p-1 cursor-pointer"
           title="Bagikan postingan ini"
         >
           <span className="text-[11px] font-bold">#</span>
@@ -272,22 +332,23 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       {/* 3. Action Bar */}
       <div className="flex items-center justify-between pt-3 border-t border-[#1A4D3A]/10 text-xs font-bold text-[#1A4D3A]">
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Like Button */}
+          {/* Like Button with strict optimistic state & race-condition lock */}
           <motion.button
             type="button"
             id={`btn-like-${post.id}`}
-            whileTap={{ scale: 0.88 }}
+            whileTap={{ scale: isPending ? 1 : 0.88 }}
             onClick={handleToggleLike}
+            disabled={isPending}
             className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer ${
-              isLiked
+              liked
                 ? 'bg-rose-50 text-rose-600 border border-rose-200 shadow-clay-sm'
                 : 'bg-white text-[#1A4D3A]/75 border border-white shadow-clay-sm hover:bg-rose-50/50 hover:text-rose-500 active:scale-95'
-            }`}
-            title={user ? (isLiked ? 'Batal Suka' : 'Sukai Postingan') : 'Masuk untuk menyukai'}
+            } disabled:opacity-85`}
+            title={user ? (liked ? 'Batal Suka' : 'Sukai Postingan') : 'Masuk untuk menyukai'}
           >
             <Heart
               className={`w-4 h-4 transition-transform ${
-                isLiked ? 'fill-rose-500 text-rose-500 scale-110' : ''
+                liked ? 'fill-rose-500 text-rose-500 scale-110' : ''
               }`}
             />
             <span className="text-xs font-black">{likesCount}</span>
@@ -310,16 +371,29 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           </button>
         </div>
 
-        {/* Share Button Triggering Multi-Platform Claymorphic Popup Modal */}
+        {/* Lightweight Native OS Share Sheet Button (No heavy modal) */}
         <button
           type="button"
           id={`btn-share-${post.id}`}
-          onClick={handleOpenShareModal}
-          className="px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer bg-white text-[#1A4D3A]/75 border border-white shadow-clay-sm hover:bg-[#FAF8F5] hover:text-[#357A59] active:scale-95"
-          title="Bagikan aksi ini ke WhatsApp, Instagram, X, Telegram, LinkedIn, atau Salin Tautan"
+          onClick={handleNativeShare}
+          className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer ${
+            copiedLink
+              ? 'bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/40 shadow-clay-sm'
+              : 'bg-white text-[#1A4D3A]/75 border border-white shadow-clay-sm hover:bg-[#FAF8F5] hover:text-[#357A59] active:scale-95'
+          }`}
+          title="Bagikan postingan ini"
         >
-          <Share2 className="w-3.5 h-3.5 text-[#FF9E20]" />
-          <span className="text-xs font-black">Bagikan</span>
+          {copiedLink ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-[#357A59]" />
+              <span className="text-xs font-black text-[#357A59]">Tersalin!</span>
+            </>
+          ) : (
+            <>
+              <Share2 className="w-3.5 h-3.5 text-[#FF9E20]" />
+              <span className="text-xs font-black">Bagikan</span>
+            </>
+          )}
         </button>
       </div>
 
@@ -440,13 +514,6 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* 5. Multi-Platform Interactive Share Modal */}
-      <SharePostModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        post={post}
-      />
     </article>
   );
 }
