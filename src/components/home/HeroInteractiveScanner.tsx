@@ -12,7 +12,6 @@ import {
   Layers, 
   Clock, 
   CheckCircle2, 
-  Flame,
   UploadCloud,
   Leaf
 } from 'lucide-react';
@@ -287,13 +286,7 @@ export default function HeroInteractiveScanner() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
           {/* LEFT COLUMN (5 Cols): Punchy Value Proposition */}
-          <div className="lg:col-span-5 space-y-6">
-            {/* Brand Slogan Pill */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#EBF4EE] border border-[#6DB677]/40 shadow-clay-sm text-xs font-extrabold text-[#1A4D3A]">
-              <span className="w-2 h-2 rounded-full bg-[#059669] animate-pulse" />
-              <span>Green Market, Upcycle, & Sustainable</span>
-            </div>
-
+          <div className="lg:col-span-5 space-y-6 pt-1 sm:pt-2 lg:pt-[54px] pb-4 sm:pb-6 lg:pb-[56px]">
             {/* Headline: Exactly 6 words */}
             <h1 className="text-4xl sm:text-5xl lg:text-5xl font-black text-[#1A4D3A] tracking-tight leading-[1.08]">
               Ubah Sampah Jadi Cuan & Karya.
@@ -328,15 +321,6 @@ export default function HeroInteractiveScanner() {
                   <ArrowRight className="w-4 h-4 text-[#357A59] group-hover:translate-x-1 transition-transform" />
                 </Link>
               </motion.div>
-            </div>
-
-            {/* Tactile 1-Row Social Proof Badge */}
-            <div className="pt-2">
-              <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-[#FAF8F5] shadow-clay-sm text-xs font-bold text-[#1A4D3A]">
-                <Flame className="w-4 h-4 text-[#FF9E20] fill-[#FF9E20]" />
-                <span>1.420+ kreasi dibuat minggu ini</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-[#357A59] ml-1" />
-              </div>
             </div>
           </div>
 
