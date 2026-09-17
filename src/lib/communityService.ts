@@ -4,6 +4,10 @@ import { createClient, isSupabaseConfigured, CommunityPostItem, CommunityComment
  * Fetch live public posts directly from Supabase with relational profiles,
  * exact likes count, comments count, and the current user's like status.
  * Strictly 0 mock/dummy data. If the database is empty, returns an empty array.
+ *
+ * NOTE: To prevent PostgREST "Could not embed because more than one relationship was found"
+ * errors caused by multiple foreign keys between posts/comments and profiles in user databases,
+ * we query posts, comments, likes, and profiles in decoupled, high-performance batch queries.
  */
 export async function fetchCommunityPosts(currentUserId?: string | null): Promise<CommunityPostItem[]> {
   if (!isSupabaseConfigured()) {
@@ -13,23 +17,10 @@ export async function fetchCommunityPosts(currentUserId?: string | null): Promis
 
   const supabase = createClient();
   try {
-    // 1. Fetch live posts with author profiles, strictly ordered by created_at descending
+    // 1. Fetch live posts directly without nested embed to avoid ambiguous relation errors
     const { data: postsData, error: postsError } = await supabase
       .from('posts')
-      .select(`
-        id,
-        user_id,
-        content,
-        image_url,
-        created_at,
-        profiles (
-          id,
-          full_name,
-          username,
-          role,
-          avatar_url
-        )
-      `)
+      .select('id, user_id, content, image_url, created_at')
       .order('created_at', { ascending: false });
 
     if (postsError) {
@@ -43,76 +34,113 @@ export async function fetchCommunityPosts(currentUserId?: string | null): Promis
 
     const postIds = postsData.map((p) => p.id);
 
-    // 2. Fetch live likes for exact counter and current user like status
-    const { data: likesData, error: likesError } = await supabase
-      .from('likes')
-      .select('post_id, user_id')
-      .in('post_id', postIds);
+    // 2. Fetch live likes and live comments in parallel for maximum speed
+    const [likesResult, commentsResult] = await Promise.all([
+      supabase
+        .from('likes')
+        .select('post_id, user_id')
+        .in('post_id', postIds),
+      supabase
+        .from('comments')
+        .select('id, post_id, user_id, content, created_at')
+        .in('post_id', postIds)
+        .order('created_at', { ascending: true }),
+    ]);
 
-    if (likesError) {
-      console.warn('Supabase fetch likes error:', likesError.message);
+    if (likesResult.error) {
+      console.warn('Supabase fetch likes error:', likesResult.error.message);
+    }
+    if (commentsResult.error) {
+      console.warn('Supabase fetch comments error:', commentsResult.error.message);
     }
 
-    // 3. Fetch live comments for these posts with relational profiles
-    const { data: commentsData, error: commentsError } = await supabase
-      .from('comments')
-      .select(`
-        id,
-        post_id,
-        user_id,
-        content,
-        created_at,
-        profiles (
-          id,
-          full_name,
-          username,
-          role,
-          avatar_url
-        )
-      `)
-      .in('post_id', postIds)
-      .order('created_at', { ascending: true });
+    const likesData = likesResult.data || [];
+    const commentsData = commentsResult.data || [];
 
-    if (commentsError) {
-      console.warn('Supabase fetch comments error:', commentsError.message);
+    // 3. Collect all distinct user IDs from posts and comments to fetch profiles in one batch
+    const allUserIds = Array.from(
+      new Set([
+        ...postsData.map((p) => p.user_id),
+        ...commentsData.map((c) => c.user_id),
+      ].filter(Boolean))
+    );
+
+    const profilesMap: Record<string, CommunityProfile> = {};
+    if (allUserIds.length > 0) {
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, role, avatar_url')
+        .in('id', allUserIds);
+
+      if (profilesError) {
+        console.warn('Supabase fetch profiles error:', profilesError.message);
+      } else if (profilesData) {
+        profilesData.forEach((prof: any) => {
+          profilesMap[prof.id] = {
+            id: prof.id,
+            full_name: prof.full_name,
+            username: prof.username,
+            role: prof.role || 'Eco Warrior',
+            avatar_url: prof.avatar_url,
+          };
+        });
+      }
     }
 
     // Exact Likes map & user-liked set
     const likesCountMap: Record<string, number> = {};
     const userLikedSet = new Set<string>();
 
-    (likesData || []).forEach((like) => {
+    likesData.forEach((like) => {
       likesCountMap[like.post_id] = (likesCountMap[like.post_id] || 0) + 1;
       if (currentUserId && like.user_id === currentUserId) {
         userLikedSet.add(like.post_id);
       }
     });
 
-    // Group live comments by post_id
+    // Group live comments by post_id with attached profiles
     const commentsMap: Record<string, CommunityComment[]> = {};
-    (commentsData || []).forEach((comment: any) => {
+    commentsData.forEach((comment: any) => {
       if (!commentsMap[comment.post_id]) {
         commentsMap[comment.post_id] = [];
       }
+
+      const commentAuthor = profilesMap[comment.user_id] || {
+        id: comment.user_id,
+        full_name: 'Eco Warrior',
+        username: `eco_${comment.user_id.slice(0, 6)}`,
+        role: 'Eco Warrior',
+        avatar_url: null,
+      };
+
       commentsMap[comment.post_id].push({
         id: comment.id,
         post_id: comment.post_id,
         user_id: comment.user_id,
         content: comment.content,
         created_at: comment.created_at,
-        profiles: comment.profiles || null,
+        profiles: commentAuthor,
       });
     });
 
+    // Combine posts with their respective author profile, likes count, and comments
     return postsData.map((post: any) => {
       const postComments = commentsMap[post.id] || [];
+      const postAuthor = profilesMap[post.user_id] || {
+        id: post.user_id,
+        full_name: 'Eco Warrior',
+        username: `eco_${post.user_id.slice(0, 6)}`,
+        role: 'Eco Warrior',
+        avatar_url: null,
+      };
+
       return {
         id: post.id,
         user_id: post.user_id,
         content: post.content,
         image_url: post.image_url,
         created_at: post.created_at,
-        profiles: post.profiles || null,
+        profiles: postAuthor,
         likes_count: likesCountMap[post.id] || 0,
         comments_count: postComments.length,
         is_liked: userLikedSet.has(post.id),
@@ -133,22 +161,9 @@ export async function fetchPostComments(postId: string): Promise<CommunityCommen
 
   const supabase = createClient();
   try {
-    const { data, error } = await supabase
+    const { data: commentsData, error } = await supabase
       .from('comments')
-      .select(`
-        id,
-        post_id,
-        user_id,
-        content,
-        created_at,
-        profiles (
-          id,
-          full_name,
-          username,
-          role,
-          avatar_url
-        )
-      `)
+      .select('id, post_id, user_id, content, created_at')
       .eq('post_id', postId)
       .order('created_at', { ascending: true });
 
@@ -157,13 +172,41 @@ export async function fetchPostComments(postId: string): Promise<CommunityCommen
       return [];
     }
 
-    return (data || []).map((c: any) => ({
+    if (!commentsData || commentsData.length === 0) return [];
+
+    const userIds = Array.from(new Set(commentsData.map((c: any) => c.user_id).filter(Boolean)));
+    const profilesMap: Record<string, CommunityProfile> = {};
+
+    if (userIds.length > 0) {
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, role, avatar_url')
+        .in('id', userIds);
+
+      (profilesData || []).forEach((prof: any) => {
+        profilesMap[prof.id] = {
+          id: prof.id,
+          full_name: prof.full_name,
+          username: prof.username,
+          role: prof.role || 'Eco Warrior',
+          avatar_url: prof.avatar_url,
+        };
+      });
+    }
+
+    return commentsData.map((c: any) => ({
       id: c.id,
       post_id: c.post_id,
       user_id: c.user_id,
       content: c.content,
       created_at: c.created_at,
-      profiles: c.profiles || null,
+      profiles: profilesMap[c.user_id] || {
+        id: c.user_id,
+        full_name: 'Eco Warrior',
+        username: `eco_${c.user_id.slice(0, 6)}`,
+        role: 'Eco Warrior',
+        avatar_url: null,
+      },
     }));
   } catch (err) {
     console.error('Exception fetching post comments:', err);
@@ -198,25 +241,32 @@ export async function createCommunityPost(params: {
         content: content.trim(),
         image_url: imageUrl?.trim() || null,
       })
-      .select(`
-        id,
-        user_id,
-        content,
-        image_url,
-        created_at,
-        profiles (
-          id,
-          full_name,
-          username,
-          role,
-          avatar_url
-        )
-      `)
+      .select('id, user_id, content, image_url, created_at')
       .single();
 
     if (error) {
       console.error('Supabase insert post failed:', error.message);
       return { success: false, error: error.message };
+    }
+
+    // Resolve author profile
+    let resolvedProfile: CommunityProfile = authorProfile || {
+      id: userId,
+      full_name: 'Eco Warrior',
+      username: `eco_${userId.slice(0, 6)}`,
+      role: 'Eco Warrior',
+      avatar_url: null,
+    };
+
+    if (!authorProfile) {
+      const { data: profData } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, role, avatar_url')
+        .eq('id', userId)
+        .single();
+      if (profData) {
+        resolvedProfile = profData;
+      }
     }
 
     const postItem: CommunityPostItem = {
@@ -225,7 +275,7 @@ export async function createCommunityPost(params: {
       content: data.content,
       image_url: data.image_url,
       created_at: data.created_at,
-      profiles: (data as any).profiles || authorProfile || null,
+      profiles: resolvedProfile,
       likes_count: 0,
       comments_count: 0,
       is_liked: false,
@@ -304,25 +354,31 @@ export async function createCommunityComment(params: {
         user_id: userId,
         content: content.trim(),
       })
-      .select(`
-        id,
-        post_id,
-        user_id,
-        content,
-        created_at,
-        profiles (
-          id,
-          full_name,
-          username,
-          role,
-          avatar_url
-        )
-      `)
+      .select('id, post_id, user_id, content, created_at')
       .single();
 
     if (error) {
       console.error('Supabase insert comment error:', error.message);
       return { success: false, error: error.message };
+    }
+
+    let resolvedProfile: CommunityProfile = authorProfile || {
+      id: userId,
+      full_name: 'Eco Warrior',
+      username: `eco_${userId.slice(0, 6)}`,
+      role: 'Eco Warrior',
+      avatar_url: null,
+    };
+
+    if (!authorProfile) {
+      const { data: profData } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, role, avatar_url')
+        .eq('id', userId)
+        .single();
+      if (profData) {
+        resolvedProfile = profData;
+      }
     }
 
     const commentItem: CommunityComment = {
@@ -331,7 +387,7 @@ export async function createCommunityComment(params: {
       user_id: data.user_id,
       content: data.content,
       created_at: data.created_at,
-      profiles: (data as any).profiles || authorProfile || null,
+      profiles: resolvedProfile,
     };
 
     return { success: true, comment: commentItem };
