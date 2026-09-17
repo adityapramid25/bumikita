@@ -108,11 +108,38 @@ export interface UpcycleRecommendation {
   finishingTips?: string;
 }
 
+export interface WasteScanResult {
+  itemName: string;
+  materialCategory: string;
+  condition: string;
+  estimatedDimensions: string;
+  marketPriceRange: string;
+  upcyclePotential: "Tinggi" | "Sedang" | "Rendah";
+  recommendedCrafts: Array<{
+    title: string;
+    difficulty: string;
+    estimatedMinutes: number;
+    description: string;
+  }>;
+}
+
 export interface WasteAnalysisResult {
   isDetected?: boolean;
   userFriendlyMessage?: string;
   detectedObject: DetectedWasteObject;
   recommendations: UpcycleRecommendation[];
+  itemName?: string;
+  materialCategory?: string;
+  condition?: string;
+  estimatedDimensions?: string;
+  marketPriceRange?: string;
+  upcyclePotential?: "Tinggi" | "Sedang" | "Rendah";
+  recommendedCrafts?: Array<{
+    title: string;
+    difficulty: string;
+    estimatedMinutes: number;
+    description: string;
+  }>;
 }
 
 export interface EcoQuest {

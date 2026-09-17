@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
-import { WasteAnalysisResult } from '@/src/types';
+import { WasteAnalysisResult, WasteScanResult } from '@/src/types';
 
-// Validated Vision models evaluated sequentially on OpenRouter
+// Validated Vision models evaluated sequentially on OpenRouter as secondary fallback
 const VISION_MODELS = [
   'qwen/qwen2.5-vl-72b-instruct',
   'qwen/qwen-2.5-vl-72b-instruct',
@@ -18,7 +18,7 @@ function getOpenRouterClient() {
   return new OpenAI({
     baseURL: 'https://openrouter.ai/api/v1',
     apiKey,
-    timeout: 30000, // 30s timeout for vision model inference
+    timeout: 30000,
     defaultHeaders: {
       'HTTP-Referer': process.env.APP_URL || 'https://bumikita.app',
       'X-Title': 'BumiKita AI Scanner',
@@ -26,36 +26,32 @@ function getOpenRouterClient() {
   });
 }
 
-const SYSTEM_PROMPT = `You are an expert waste classification and upcycling AI for "BumiKita", an Indonesian eco-action platform.
+const SYSTEM_PROMPT = `You are an expert waste classification and upcycling Vision AI for "BumiKita", an Indonesian eco-action circular platform.
 
-CRITICAL DETECTION RULES:
-1. FOCUS ON FOREGROUND WASTE: Always prioritize detecting the physical waste/scrap item held in the user's hand or placed in the immediate foreground/center of the camera frame.
-2. IGNORE BACKGROUND CONTEXT: Strictly ignore background items such as computer monitors, laptop displays, keyboards, desks, walls, room lighting, or the person's hands/fingers. Do NOT classify the background screen as the object unless the screen itself is explicitly the disassembled, broken waste being recycled.
-3. COMMON MISCLASSIFICATIONS TO AVOID:
-   - Clear plastic cup/bottle in front of a monitor -> Classify as "Botol Plastik PET" or "Gelas Plastik PP", NOT "Layar Komputer" or "Komponen Elektronik".
-   - Snack wrapper on a desk -> Classify as "Kemasan Sachet / Plastik Multilayer", NOT "Meja Kayu".
-4. ACCURACY & FALLBACK:
-   - If multiple objects appear, identify the primary recyclable/trash item intended for upcycling.
+CRITICAL DETECTION DIRECTIVES:
+1. FOREGROUND FOCUS: Detect and classify the physical waste/scrap item held in the hand or centered in the camera frame.
+2. IGNORE AMBIENT BACKGROUND: Strictly ignore ambient background items (such as computer monitors, laptop displays, keyboards, desks, ambient room lighting, or human hands/fingers). Do NOT classify the background computer display as the item.
+3. ACCURACY & PRECISION:
+   - Identify the primary recyclable waste material accurately (e.g., "Botol Plastik Minuman", "Kardus Karton Box", "Gelas Kopi Plastik PP", "Kaleng Minuman Aluminium", "Kain Perca Denim", "Minyak Jelantah").
    - Output language MUST strictly be in Indonesian.
 
-RETURN STRICTLY RAW VALID JSON ONLY. Do NOT include markdown blocks (\`\`\`json or \`\`\`).
+RETURN STRICTLY RAW VALID JSON ONLY. Do NOT wrap with markdown code fences (\`\`\`json or \`\`\`).
 
-JSON OUTPUT STRUCTURE:
+EXACT JSON OUTPUT STRUCTURE:
 {
-  "itemName": string (e.g., "Botol Plastik PET", "Gelas Minuman Plastik"),
-  "materialCategory": "Plastik PET (Polyethylene Terephthalate)" | "Plastik PP" | "Kertas & Karton" | "Kaca" | "Kaleng & Logam" | "Tekstil" | "Minyak Jelantah" | "Elektronik / E-waste" | "Lainnya",
-  "confidenceScore": number (0 to 1),
-  "recyclability": "Tinggi" | "Sedang" | "Rendah",
-  "condition": string (e.g., "Bersih, Layak Upcycle"),
-  "dimension": string (e.g., "Ukuran Sedang (~500-600ml)"),
-  "estimatedScrapValue": string (e.g., "Rp 3.500 - Rp 6.000 / kg"),
-  "upcycleIdeas": [
+  "itemName": string,
+  "materialCategory": string,
+  "condition": string,
+  "estimatedDimensions": string,
+  "marketPriceRange": string,
+  "upcyclePotential": "Tinggi" | "Sedang" | "Rendah",
+  "recommendedCrafts": [
     {
       "title": string,
-      "difficulty": "Mudah" | "Sedang" | "Menengah",
+      "difficulty": "Mudah" | "Sedang" | "Menantang",
       "estimatedMinutes": number,
+      "description": string,
       "tools": string[],
-      "briefDescription": string,
       "materialsNeeded": string[],
       "steps": string[]
     }
@@ -80,182 +76,164 @@ function extractJsonFromText(rawText: string): any {
   }
 }
 
-// Built-in high quality heuristic fallback if both external AI providers are unavailable
-function getHeuristicAnalysis(prompt: string): WasteAnalysisResult {
+// Built-in contextual analysis fallback if external AI providers fail
+function getDynamicHeuristicAnalysis(prompt: string): WasteScanResult {
   const p = (prompt || '').toLowerCase();
 
-  if (p.includes('jeans') || p.includes('denim') || p.includes('kain') || p.includes('baju')) {
+  if (p.includes('jeans') || p.includes('denim') || p.includes('kain') || p.includes('baju') || p.includes('celana')) {
     return {
-      isDetected: true,
-      userFriendlyMessage: 'Material tekstil denim terdeteksi untuk proyek upcycling.',
-      detectedObject: {
-        label: 'Kain Denim / Jeans Bekas',
-        material: 'Katun Denim Tebal',
-        dimension: 'Potongan Pakaian (~80cm)',
-        condition: 'Layak Daur Ulang / Upcycle',
-        estimatedScrapValue: 'Rp 4.000 - Rp 8.000 / kg',
-      },
-      recommendations: [
+      itemName: 'Kain Denim / Jeans Bekas',
+      materialCategory: 'Katun Denim Tebal (Tekstil)',
+      condition: 'Layak Daur Ulang & Upcycling',
+      estimatedDimensions: 'Panjang ~60-80cm',
+      marketPriceRange: 'Rp 4.000 - Rp 8.000 / kg',
+      upcyclePotential: 'Tinggi',
+      recommendedCrafts: [
         {
-          id: 'rec-denim-1',
-          title: 'Tote Bag Denim Pocket',
+          title: 'Tote Bag Denim Pocket Vintage',
           difficulty: 'Sedang',
-          estimatedTime: '45 Menit',
-          benchmarkPrice: 'Rp 65.000 - Rp 95.000',
-          summary: 'Tas jinjing kokoh dengan memanfaatkan saku belakang jeans sebagai kantong HP.',
-          materialsNeeded: ['Celana jeans bekas', 'Benang jahit nilon', 'Gunting kain', 'Jarum jahit / mesin jahit'],
-          steps: [
-            'Gunting pipa kaki celana jeans sepanjang 35-40 cm untuk badan tas.',
-            'Jahit bagian bawah dengan jahitan ganda agar kuat menahan beban buku.',
-            'Potong ban pinggang atau sisa kain kaki untuk dijadikan tali jinjing sepanjang 50 cm.',
-            'Pasang saku belakang jeans di sisi depan tas untuk kompartemen kartu dan HP.',
-          ],
+          estimatedMinutes: 45,
+          description: 'Tas jinjing kokoh bergaya vintage dengan memanfaatkan saku belakang jeans sebagai kantong smartphone.',
         },
         {
-          id: 'rec-denim-2',
-          title: 'Case Laptop & Tablet Shockproof',
+          title: 'Shockproof Tablet / Gadget Sleeve',
           difficulty: 'Sedang',
-          estimatedTime: '35 Menit',
-          benchmarkPrice: 'Rp 50.000 - Rp 75.000',
-          summary: 'Sleeve pelindung gadget empuk dengan lapisan dalam kain perca lembut.',
-          materialsNeeded: ['Kain jeans bekas', 'Busa ati tipis / busa peredam 3mm', 'Kancing magnet atau velcro'],
-          steps: [
-            'Ukur dimensi laptop ditambah margin 3 cm di setiap sisi.',
-            'Lapisi bagian dalam dengan busa ati peredam guncangan.',
-            'Jahit tepi keliling dan pasang penutup berkancing velcro.',
-          ],
+          estimatedMinutes: 35,
+          description: 'Sleeve pelindung gadget empuk dengan lapisan kain perca halus.',
         },
         {
-          id: 'rec-denim-3',
-          title: 'Organizer Gantung Dinding (Wall Hanging Pockets)',
+          title: 'Wall Hanging Organizer Pockets',
           difficulty: 'Mudah',
-          estimatedTime: '25 Menit',
-          benchmarkPrice: 'Rp 40.000 - Rp 60.000',
-          summary: 'Tempat penyimpanan perlengkapan alat tulis & kabel dari susunan saku jeans.',
-          materialsNeeded: ['Saku celana jeans bekas (3-4 buah)', 'Kayu dowel / sumpit bambu', 'Tali rami'],
-          steps: [
-            'Gunting saku jeans dengan memberi sisa kain 1 cm di sekelilingnya.',
-            'Jahit atau lem saku-saku tersebut ke atas selembar kain denim dasar.',
-            'Pasang kayu gantungan di bagian atas dan ikat dengan tali rami vintage.',
-          ],
+          estimatedMinutes: 25,
+          description: 'Organizer dinding dari deretan saku celana jeans untuk merapikan alat tulis dan kabel.',
         },
       ],
     };
   }
 
-  if (p.includes('kardus') || p.includes('karton') || p.includes('box') || p.includes('sepatu')) {
+  if (p.includes('kardus') || p.includes('karton') || p.includes('box') || p.includes('sepatu') || p.includes('kertas')) {
     return {
-      isDetected: true,
-      userFriendlyMessage: 'Material karton/kardus kemasan terdeteksi untuk kreasi upcycle.',
-      detectedObject: {
-        label: 'Kardus Kemasan / Kotak Sepatu',
-        material: 'Corrugated Cardboard Kaku',
-        dimension: 'Sedang (30x20x15 cm)',
-        condition: 'Kering dan Kokoh',
-        estimatedScrapValue: 'Rp 2.200 - Rp 3.500 / kg',
-      },
-      recommendations: [
+      itemName: 'Kardus Karton Kemasan Box',
+      materialCategory: 'Karton Corrugated Kaku (Kertas)',
+      condition: 'Kering & Kokoh',
+      estimatedDimensions: 'Sedang (30 x 20 x 15 cm)',
+      marketPriceRange: 'Rp 2.500 - Rp 4.000 / kg',
+      upcyclePotential: 'Tinggi',
+      recommendedCrafts: [
         {
-          id: 'rec-box-1',
           title: 'Organizer Meja Minimalis Scandinavian',
           difficulty: 'Mudah',
-          estimatedTime: '20 Menit',
-          benchmarkPrice: 'Rp 35.000 - Rp 50.000',
-          summary: 'Wadah kompartemen meja kos multifungsi dengan sekat alat tulis dan dock charger HP.',
-          materialsNeeded: ['1 kotak sepatu kardus beserta tutupnya', 'Kertas kado kraft cokelat / cat akrilik', 'Lem tembak'],
-          steps: [
-            'Potong tutup kardus menjadi 3 bilah sekat berukuran sesuai tinggi kotak.',
-            'Beri celah takik di tengah bilah sekat agar saling mengunci membentuk kompartemen.',
-            'Buat lubang oval di sisi belakang untuk jalur kabel charger HP.',
-            'Lapisi permukaan luar dengan kertas kraft cokelat untuk tampilan minimalis.',
-          ],
+          estimatedMinutes: 20,
+          description: 'Wadah kompartemen meja kos multifungsi dengan sekat alat tulis dan dock charger kabel.',
         },
         {
-          id: 'rec-box-2',
-          title: 'Lampu Tidur Meja Geometric Ambient',
+          title: 'Lampu Meja Hias Geometric Shadow',
           difficulty: 'Sedang',
-          estimatedTime: '40 Menit',
-          benchmarkPrice: 'Rp 60.000 - Rp 90.000',
-          summary: 'Kap lampu artistik dengan pola lubang geometris pembuat bayangan estetik di kamar.',
-          materialsNeeded: ['Kardus kaku', 'Fitting lampu gantung + bohlam LED warm white 3W', 'Cutter presisi'],
-          steps: [
-            'Gambar pola pola geometris segitiga/garis halus di sisi kardus.',
-            'Lubangi dengan cutter tajam hingga cahaya dapat menembus.',
-            'Pasang fitting lampu di bagian dasar dengan lem silikon tahan panas.',
-          ],
+          estimatedMinutes: 35,
+          description: 'Kap lampu artistik dengan pola lubang geometris pembuat bayangan estetik di kamar.',
         },
         {
-          id: 'rec-box-3',
           title: 'Mini Drawer Box Susun',
           difficulty: 'Sedang',
-          estimatedTime: '30 Menit',
-          benchmarkPrice: 'Rp 45.000 - Rp 65.000',
-          summary: 'Laci mini 2 tingkat untuk menyimpan perhiasan, kunci motor, dan skincare.',
-          materialsNeeded: ['2 kotak kardus ukuran sejenis', 'Gagang laci mini / manik kayu', 'Lem tembak'],
-          steps: [
-            'Bentuk rangka luar laci dari satu kotak kardus.',
-            'Potong kotak kedua sebagai kotak selongsong laci geser.',
-            'Pasang kenop manik kayu di bagian depan sebagai tarikan laci.',
-          ],
+          estimatedMinutes: 30,
+          description: 'Laci mini 2 susun untuk menyimpan kunci, kacamata, dan aksesoris harian.',
         },
       ],
     };
   }
 
-  // Default: Botol Plastik / Wadah Serbaguna
+  if (p.includes('kaleng') || p.includes('aluminium') || p.includes('soda') || p.includes('logam')) {
+    return {
+      itemName: 'Kaleng Minuman Aluminium',
+      materialCategory: 'Aluminium Grade Food / Minuman',
+      condition: 'Bersih & Bebas Residu',
+      estimatedDimensions: 'Tinggi ~12cm, Diameter ~6.5cm (330ml)',
+      marketPriceRange: 'Rp 14.000 - Rp 20.000 / kg',
+      upcyclePotential: 'Tinggi',
+      recommendedCrafts: [
+        {
+          title: 'Tempat Lilin Aromaterapi Ambient Cutout',
+          difficulty: 'Mudah',
+          estimatedMinutes: 15,
+          description: 'Lentera mini bernuansa rustic dengan ukiran motif lubang cahaya hangat.',
+        },
+        {
+          title: 'Pot Sukulen Meja Minimalis Metallic',
+          difficulty: 'Mudah',
+          estimatedMinutes: 15,
+          description: 'Pot tanaman sukulen mungil bergaya industrial kontemporer.',
+        },
+        {
+          title: 'Mini Desk Pen Stand Hammered',
+          difficulty: 'Mudah',
+          estimatedMinutes: 20,
+          description: 'Wadah alat tulis dengan tekstur tempa estetik anti karat.',
+        },
+      ],
+    };
+  }
+
+  if (p.includes('kaca') || p.includes('beling') || p.includes('toples') || p.includes('jar')) {
+    return {
+      itemName: 'Botol / Toples Kaca Bening',
+      materialCategory: 'Kaca Silika (Glass)',
+      condition: 'Utuh, Bersih & Higienis',
+      estimatedDimensions: 'Tinggi ~18cm, Diameter ~8cm',
+      marketPriceRange: 'Rp 1.000 - Rp 2.500 / botol',
+      upcyclePotential: 'Tinggi',
+      recommendedCrafts: [
+        {
+          title: 'Terrarium Ekosistem Mini Tertutup',
+          difficulty: 'Sedang',
+          estimatedMinutes: 30,
+          description: 'Miniatur hutan tropis dalam toples kaca dengan lapisan lumut, arang, dan batu hias.',
+        },
+        {
+          title: 'Dispenser Sabun Cuci Estetik Amber',
+          difficulty: 'Mudah',
+          estimatedMinutes: 15,
+          description: 'Botol sabun cair berestetika kafe minimalis dengan pump dispenser kuningan.',
+        },
+        {
+          title: 'Vas Bunga Hidroponik Single Stem',
+          difficulty: 'Mudah',
+          estimatedMinutes: 10,
+          description: 'Vas tanaman rambat air untuk pemanis meja kerja dan ruangan santai.',
+        },
+      ],
+    };
+  }
+
+  // Dynamic contextual fallback
+  const userDetectedName = prompt?.trim()
+    ? prompt.trim().slice(0, 40)
+    : 'Limbah Material Anorganik Terdeteksi';
+
   return {
-    isDetected: true,
-    userFriendlyMessage: 'Material botol/wadah plastik terdeteksi untuk kreasi upcycling.',
-    detectedObject: {
-      label: 'Botol Plastik Minuman PET',
-      material: 'Plastik PET (Polyethylene Terephthalate) #1',
-      dimension: 'Tinggi ~22cm, Diameter ~7cm (600ml)',
-      condition: 'Bersih & Layak Upcycle',
-      estimatedScrapValue: 'Rp 3.500 - Rp 6.000 / kg',
-    },
-    recommendations: [
+    itemName: userDetectedName,
+    materialCategory: 'Campuran Material Daur Ulang',
+    condition: 'Bersih & Siap Diolah',
+    estimatedDimensions: 'Dimensi Standar Rumah Tangga',
+    marketPriceRange: 'Rp 3.000 - Rp 7.000 / kg',
+    upcyclePotential: 'Tinggi',
+    recommendedCrafts: [
       {
-        id: 'rec-bottle-1',
-        title: 'Pot Tanaman Self-Watering Wicking System',
+        title: `Kerajinan Upcycle Fungsional ${userDetectedName}`,
         difficulty: 'Mudah',
-        estimatedTime: '15 Menit',
-        benchmarkPrice: 'Rp 25.000 - Rp 45.000',
-        summary: 'Pot tanaman hidroponik otomatis menggunakan sistem sumbu kain flanel anti layu.',
-        materialsNeeded: ['Botol plastik 600ml/1.5L', 'Sumbu kompor / kain flanel bekas', 'Cat akrilik pastel'],
-        steps: [
-          'Potong botol plastik menjadi dua bagian tepat di tengah badan botol.',
-          'Lubangi tutup botol sebesar 0.5 cm dan masukkan kain flanel sepanjang 15 cm sebagai sumbu air.',
-          'Balik potongan botol atas (posisi corong menghadap ke bawah) ke dalam potongan botol bawah.',
-          'Isi air di bagian bawah, masukkan media tanam dan bibit di bagian atas corong.',
-        ],
+        estimatedMinutes: 25,
+        description: 'Proyek kerajinan bernilai guna tinggi untuk kebutuhan perabot dan dekorasi rumah tangga.',
       },
       {
-        id: 'rec-bottle-2',
-        title: 'Wadah Alat Tulis & Kuas Estetik Cat Duotone',
+        title: 'Organizer Kompartemen Daur Ulang',
         difficulty: 'Mudah',
-        estimatedTime: '20 Menit',
-        benchmarkPrice: 'Rp 20.000 - Rp 35.000',
-        summary: 'Tempat pulpen dan kuas lukis dengan pinggiran halus anti gores dan motif pastel.',
-        materialsNeeded: ['Botol plastik bekas', 'Setrika pakaian (untuk menghaluskan tepi potong)', 'Cat semprot doff'],
-        steps: [
-          'Potong botol setinggi 10-12 cm dari dasar.',
-          'Tempelkan bibir potongan ke permukaan setrika hangat selama 3-5 detik agar tepinya melengkung halus.',
-          'Semprot dengan cat warna earth tone (sage green / terracotta) untuk estetika modern.',
-        ],
+        estimatedMinutes: 20,
+        description: 'Wadah penyimpanan estetik multifungsi yang merapikan meja kerja.',
       },
       {
-        id: 'rec-bottle-3',
-        title: 'Dispenser Kantong Plastik / Trash Bag Holder',
+        title: 'Wadah Multifungsi Ramah Lingkungan',
         difficulty: 'Mudah',
-        estimatedTime: '15 Menit',
-        benchmarkPrice: 'Rp 25.000 - Rp 40.000',
-        summary: 'Wadah dinding pengambil kantong plastik reuse praktis satu per satu.',
-        materialsNeeded: ['Botol plastik besar', 'Double tape foam', 'Gunting'],
-        steps: [
-          'Potong bagian dasar botol untuk memasukkan tumpukan kantong plastik.',
-          'Haluskan tepi potongan dengan selotip atau setrika hangat.',
-          'Tempelkan botol di dinding dapur, tarik kantong plastik keluar melalui mulut botol di bawah.',
-        ],
+        estimatedMinutes: 15,
+        description: 'Daur ulang kreatif yang memperpanjang siklus hidup material dan mengurangi sampah TPA.',
       },
     ],
   };
@@ -264,62 +242,60 @@ function getHeuristicAnalysis(prompt: string): WasteAnalysisResult {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { prompt = '', imageBase64 = '', image = '', mimeType = 'image/jpeg' } = body;
+    const { prompt, imageBase64, image, imageUrl } = body;
 
-    const rawImage = (imageBase64 || image || '').trim();
+    const rawImage = imageBase64 || image || imageUrl;
     if (!rawImage) {
       return NextResponse.json(
-        { error: 'Foto tidak ditemukan. Silakan ambil atau unggah foto objek sampah terlebih dahulu.' },
+        { error: 'Foto sampah wajib disertakan untuk analisis Vision AI.' },
         { status: 400 }
       );
     }
 
     let base64Clean = '';
-    let validMimeType = mimeType && ['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)
-      ? mimeType
-      : 'image/jpeg';
+    let validMimeType = 'image/jpeg';
 
-    // Handle remote image URL gracefully on the server (avoids browser CORS issues)
     if (rawImage.startsWith('http://') || rawImage.startsWith('https://')) {
       try {
-        console.log(`[Vision API] Fetching remote image URL server-side: ${rawImage.slice(0, 80)}...`);
-        const imageRes = await fetch(rawImage, {
-          headers: { 'User-Agent': 'BumiKita/1.0 (Web/NextJS)' },
-        });
-        if (!imageRes.ok) {
-          throw new Error(`Remote image returned status ${imageRes.status}`);
+        const imgRes = await fetch(rawImage, { signal: AbortSignal.timeout(10000) });
+        if (!imgRes.ok) {
+          throw new Error(`Failed to fetch image URL: ${imgRes.status}`);
         }
-        const buffer = await imageRes.arrayBuffer();
-        base64Clean = Buffer.from(buffer).toString('base64');
-        const cType = imageRes.headers.get('content-type');
-        if (cType && ['image/jpeg', 'image/png', 'image/webp'].includes(cType)) {
-          validMimeType = cType;
+        const contentType = imgRes.headers.get('content-type');
+        if (contentType && contentType.startsWith('image/')) {
+          validMimeType = contentType.split(';')[0];
         }
-      } catch (fetchErr: any) {
-        console.warn('[Vision API] Failed to fetch remote image URL:', fetchErr?.message || fetchErr);
-        // Do not crash: generate heuristic fallback based on user intent
-        const fallback = getHeuristicAnalysis(prompt);
+        const arrayBuf = await imgRes.arrayBuffer();
+        base64Clean = Buffer.from(arrayBuf).toString('base64');
+      } catch (imgFetchErr: any) {
+        console.warn('Image URL fetch error:', imgFetchErr);
+        const fallbackScan = getDynamicHeuristicAnalysis(prompt);
         return NextResponse.json({
           success: true,
-          isDetected: true,
+          ...fallbackScan,
           data: {
-            ...fallback,
-            detectedItemName: fallback.detectedObject.label,
-            detectedMaterialType: fallback.detectedObject.material,
-            projectName: fallback.recommendations[0]?.title,
-            difficulty: fallback.recommendations[0]?.difficulty,
-            timeEstimate: fallback.recommendations[0]?.estimatedTime,
-            estimatedValueIdr: 45000,
-            productDescription: fallback.recommendations[0]?.summary,
-            requiredMaterials: fallback.recommendations[0]?.materialsNeeded,
-            toolsNeeded: ['Gunting', 'Lem serbaguna'],
-            steps: fallback.recommendations[0]?.steps.map((st, i) => ({
-              stepNumber: i + 1,
-              title: `Langkah ${i + 1}`,
-              instruction: st,
+            ...fallbackScan,
+            detectedObject: {
+              label: fallbackScan.itemName,
+              material: fallbackScan.materialCategory,
+              dimension: fallbackScan.estimatedDimensions,
+              condition: fallbackScan.condition,
+              estimatedScrapValue: fallbackScan.marketPriceRange,
+            },
+            recommendations: fallbackScan.recommendedCrafts.map((c, i) => ({
+              id: `rec-url-${i + 1}`,
+              title: c.title,
+              difficulty: c.difficulty,
+              estimatedTime: `${c.estimatedMinutes} Menit`,
+              benchmarkPrice: 'Rp 35.000 - Rp 65.000',
+              summary: c.description,
+              materialsNeeded: [fallbackScan.itemName, 'Lem serbaguna', 'Gunting'],
+              steps: [
+                'Bersihkan objek dari kotoran atau sisa residu.',
+                'Bentuk sesuai rancangan pola upcycling.',
+                'Lakukan sentuhan akhir agar estetik dan siap pakai.',
+              ],
             })),
-            co2SavedKg: 2.5,
-            landfillDivertedGrams: 300,
           },
           modelUsed: 'heuristic-engine',
         });
@@ -339,266 +315,277 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const formattedImageUrl = `data:${validMimeType};base64,${base64Clean}`;
-
     const userTextPrompt = prompt?.trim()
-      ? `User note: "${prompt.trim()}". CRITICAL: Focus exclusively on the physical waste item held or placed in the foreground/center. Strictly ignore any background computer screens, monitors, laptops, keyboards, or tables. Return valid JSON only.`
-      : 'CRITICAL: Focus exclusively on the physical waste item held or placed in the foreground/center. Strictly ignore any background computer screens, monitors, laptops, keyboards, or tables. Return valid JSON only.';
-
-    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-      {
-        role: 'system',
-        content: SYSTEM_PROMPT,
-      },
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: userTextPrompt,
-          },
-          {
-            type: 'image_url',
-            image_url: {
-              url: formattedImageUrl,
-            },
-          },
-        ],
-      },
-    ];
+      ? `Konteks pengguna: "${prompt.trim()}". Identifikasi objek sampah/material daur ulang di bagian latar depan kamera. Kembalikan format JSON sesuai skema.`
+      : 'Identifikasi objek sampah/material daur ulang di bagian latar depan kamera secara detail. Kembalikan format JSON sesuai skema.';
 
     let parsedJson: any = null;
     let activeModelUsed = '';
     let lastError: any = null;
 
-    // 1. Primary Engine: Qwen 2.5-VL via OpenRouter
-    const openRouterClient = getOpenRouterClient();
-    if (openRouterClient) {
-      for (const candidateModel of VISION_MODELS) {
-        try {
-          console.log(`[Vision API] Trying OpenRouter model: ${candidateModel}`);
-          const response = await openRouterClient.chat.completions.create({
-            model: candidateModel,
-            messages,
-            temperature: 0.1,
-            max_tokens: 1800,
-          });
-
-          const content = response?.choices?.[0]?.message?.content;
-          if (content && content.trim()) {
-            parsedJson = extractJsonFromText(content);
-            activeModelUsed = candidateModel;
-            console.log(`[Vision API] Successfully processed with ${candidateModel}`);
-            break;
-          }
-        } catch (err: any) {
-          lastError = err;
-          const statusCode = err?.status || err?.statusCode;
-          console.warn(`[Vision API] Model ${candidateModel} failed (${statusCode || 'timeout'}): ${err?.message}`);
-        }
-      }
-    }
-
-    // 2. High-Availability Fallback: Gemini Flash Vision
-    if (!parsedJson && process.env.GEMINI_API_KEY) {
+    // 1. PRIMARY ENGINE: Google Gemini Vision via @google/genai SDK
+    if (process.env.GEMINI_API_KEY) {
       try {
-        console.log('[Vision API] OpenRouter unavailable. Cascading to Gemini Vision...');
+        console.log('[Vision AI] Analyzing foreground waste with Gemini Vision (gemini-3.8-flash)...');
         const geminiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         const geminiRes = await geminiClient.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3.8-flash',
           contents: [
             {
-              role: 'user',
-              parts: [
-                {
-                  text: `${SYSTEM_PROMPT}\n\n${userTextPrompt}`,
-                },
-                {
-                  inlineData: {
-                    mimeType: validMimeType,
-                    data: base64Clean,
-                  },
-                },
-              ],
+              text: `${SYSTEM_PROMPT}\n\n${userTextPrompt}`,
+            },
+            {
+              inlineData: {
+                mimeType: validMimeType,
+                data: base64Clean,
+              },
             },
           ],
         });
 
         if (geminiRes.text && geminiRes.text.trim()) {
           parsedJson = extractJsonFromText(geminiRes.text);
-          activeModelUsed = 'gemini-2.5-flash';
-          console.log('[Vision API] Successfully processed with Gemini Flash fallback!');
+          activeModelUsed = 'gemini-3.8-flash';
+          console.log('[Vision AI] Successfully extracted dynamic payload from Gemini 3.8 Flash!');
         }
       } catch (geminiErr: any) {
-        console.warn('[Vision API] Gemini fallback error:', geminiErr?.message || geminiErr);
-        lastError = geminiErr;
+        console.warn('[Vision AI] Gemini 3.8 Flash failed, trying gemini-2.5-flash:', geminiErr?.message || geminiErr);
+        try {
+          const geminiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+          const geminiRes = await geminiClient.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [
+              {
+                text: `${SYSTEM_PROMPT}\n\n${userTextPrompt}`,
+              },
+              {
+                inlineData: {
+                  mimeType: validMimeType,
+                  data: base64Clean,
+                },
+              },
+            ],
+          });
+
+          if (geminiRes.text && geminiRes.text.trim()) {
+            parsedJson = extractJsonFromText(geminiRes.text);
+            activeModelUsed = 'gemini-2.5-flash';
+            console.log('[Vision AI] Successfully extracted dynamic payload from Gemini 2.5 Flash!');
+          }
+        } catch (geminiErr2: any) {
+          console.warn('[Vision AI] Gemini 2.5 Flash error:', geminiErr2?.message || geminiErr2);
+          lastError = geminiErr2;
+        }
       }
     }
 
-    // 3. Fallback Heuristic Engine: Guarantees user always gets actionable results
+    // 2. SECONDARY ENGINE: OpenRouter Vision
     if (!parsedJson) {
-      console.warn('[Vision API] Both external AI APIs unavailable. Using heuristic circular engine.', lastError?.message);
-      const fallbackResult = getHeuristicAnalysis(prompt);
-      parsedJson = fallbackResult;
-      activeModelUsed = 'heuristic-backup';
+      const openRouterClient = getOpenRouterClient();
+      if (openRouterClient) {
+        const formattedImageUrl = `data:${validMimeType};base64,${base64Clean}`;
+        const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+          {
+            role: 'system',
+            content: SYSTEM_PROMPT,
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: userTextPrompt,
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: formattedImageUrl,
+                },
+              },
+            ],
+          },
+        ];
+
+        for (const candidateModel of VISION_MODELS) {
+          try {
+            console.log(`[Vision AI] Trying OpenRouter model: ${candidateModel}`);
+            const response = await openRouterClient.chat.completions.create({
+              model: candidateModel,
+              messages,
+              temperature: 0.1,
+              max_tokens: 1800,
+            });
+
+            const content = response?.choices?.[0]?.message?.content;
+            if (content && content.trim()) {
+              parsedJson = extractJsonFromText(content);
+              activeModelUsed = candidateModel;
+              console.log(`[Vision AI] Successfully processed with ${candidateModel}`);
+              break;
+            }
+          } catch (err: any) {
+            lastError = err;
+            const statusCode = err?.status || err?.statusCode;
+            console.warn(`[Vision AI] OpenRouter model ${candidateModel} failed (${statusCode || 'timeout'}): ${err?.message}`);
+          }
+        }
+      }
     }
 
-    // Extract raw detection fields
-    const rawItemName =
+    // 3. Contextual Heuristic Fallback if both vision APIs fail
+    if (!parsedJson) {
+      console.warn('[Vision AI] Vision APIs unavailable. Using contextual engine.', lastError?.message);
+      parsedJson = getDynamicHeuristicAnalysis(prompt);
+      activeModelUsed = 'contextual-recovery';
+    }
+
+    // DYNAMIC BINDING TO WASTESCANRESULT CONTRACT
+    const itemName =
       parsedJson.itemName ||
       parsedJson.detectedObject?.label ||
-      'Botol Plastik PET';
-    const rawMaterialCategory =
+      (prompt?.trim() ? prompt.trim() : 'Material Daur Ulang Terdeteksi');
+
+    const materialCategory =
       parsedJson.materialCategory ||
       parsedJson.detectedObject?.material ||
-      'Plastik PET (Polyethylene Terephthalate)';
-    const confidenceScore =
-      typeof parsedJson.confidenceScore === 'number'
-        ? Math.min(Math.max(parsedJson.confidenceScore, 0), 1)
-        : 0.94;
-    const recyclability =
-      parsedJson.recyclability === 'Rendah' || parsedJson.recyclability === 'Sedang'
-        ? parsedJson.recyclability
-        : 'Tinggi';
+      'Campuran Material Daur Ulang';
 
-    // Anti-Hallucination & Background Noise Guard:
-    // If the vision model accidentally captured the background monitor/screen/desk instead of the foreground item
-    const lowerItem = (rawItemName || '').toLowerCase();
-    const isBackgroundHallucination =
-      lowerItem.includes('layar') ||
-      lowerItem.includes('monitor') ||
-      lowerItem.includes('laptop') ||
-      lowerItem.includes('komputer') ||
-      lowerItem.includes('screen') ||
-      lowerItem.includes('display') ||
-      lowerItem.includes('meja') ||
-      lowerItem.includes('keyboard') ||
-      lowerItem.includes('mouse pad') ||
-      lowerItem.includes('tangan') ||
-      lowerItem.includes('jemari');
+    const condition =
+      parsedJson.condition ||
+      parsedJson.detectedObject?.condition ||
+      'Bersih, Siap Diolah';
 
-    const sanitizedItemName = isBackgroundHallucination
-      ? 'Botol Plastik PET'
-      : rawItemName;
-    const sanitizedMaterial = isBackgroundHallucination
-      ? 'Plastik PET (Polyethylene Terephthalate)'
-      : rawMaterialCategory;
+    const estimatedDimensions =
+      parsedJson.estimatedDimensions ||
+      parsedJson.dimension ||
+      parsedJson.detectedObject?.dimension ||
+      'Dimensi Standar Objek';
 
-    // Normalize upcycle ideas / recommendations
-    const rawIdeas =
-      Array.isArray(parsedJson.upcycleIdeas) && parsedJson.upcycleIdeas.length > 0
-        ? parsedJson.upcycleIdeas
-        : Array.isArray(parsedJson.recommendations) && parsedJson.recommendations.length > 0
-          ? parsedJson.recommendations
-          : getHeuristicAnalysis(prompt).recommendations;
+    const marketPriceRange =
+      parsedJson.marketPriceRange ||
+      parsedJson.estimatedScrapValue ||
+      parsedJson.detectedObject?.estimatedScrapValue ||
+      'Rp 3.500 - Rp 6.000 / kg';
 
-    const normalizedIdeas = rawIdeas.map((idea: any, idx: number) => {
-      const title = idea.title || `Kreasi Upcycling #${idx + 1}`;
-      const difficulty =
-        idea.difficulty === 'Menengah' || idea.difficulty === 'Sedang'
+    const upcyclePotential: "Tinggi" | "Sedang" | "Rendah" =
+      parsedJson.upcyclePotential === 'Rendah' || parsedJson.recyclability === 'Rendah'
+        ? 'Rendah'
+        : parsedJson.upcyclePotential === 'Sedang' || parsedJson.recyclability === 'Sedang'
           ? 'Sedang'
-          : idea.difficulty === 'Menantang'
-            ? 'Menantang'
+          : 'Tinggi';
+
+    // Normalize recommended crafts
+    const rawCrafts =
+      Array.isArray(parsedJson.recommendedCrafts) && parsedJson.recommendedCrafts.length > 0
+        ? parsedJson.recommendedCrafts
+        : Array.isArray(parsedJson.upcycleIdeas) && parsedJson.upcycleIdeas.length > 0
+          ? parsedJson.upcycleIdeas
+          : Array.isArray(parsedJson.recommendations) && parsedJson.recommendations.length > 0
+            ? parsedJson.recommendations
+            : getDynamicHeuristicAnalysis(prompt).recommendedCrafts;
+
+    const recommendedCrafts = rawCrafts.map((craft: any, idx: number) => {
+      const title = craft.title || `Kreasi Upcycling ${itemName} #${idx + 1}`;
+      const difficulty =
+        craft.difficulty === 'Menantang' || craft.difficulty === 'Hard'
+          ? 'Menantang'
+          : craft.difficulty === 'Sedang' || craft.difficulty === 'Medium'
+            ? 'Sedang'
             : 'Mudah';
+
       const estimatedMinutes =
-        typeof idea.estimatedMinutes === 'number'
-          ? idea.estimatedMinutes
-          : parseInt(idea.estimatedTime || '25', 10) || 25;
-      const estimatedTime = idea.estimatedTime || `${estimatedMinutes} Menit`;
-      const tools =
-        Array.isArray(idea.tools) && idea.tools.length > 0
-          ? idea.tools
-          : ['Gunting / cutter', 'Lem serbaguna'];
-      const briefDescription =
-        idea.briefDescription ||
-        idea.summary ||
-        'Proyek upcycling bernilai fungsional dan estetik tinggi untuk kerajinan lokal.';
-      const materialsNeeded =
-        Array.isArray(idea.materialsNeeded) && idea.materialsNeeded.length > 0
-          ? idea.materialsNeeded
-          : [sanitizedItemName, ...tools];
-      const steps =
-        Array.isArray(idea.steps) && idea.steps.length > 0
-          ? idea.steps
-          : [
-              'Bersihkan objek dari kotoran atau sisa cairan.',
-              'Bentuk atau potong sesuai pola desain kreasi yang direncanakan.',
-              'Rangkai dan beri sentuhan perekat hingga kokoh.',
-              'Finishing dekoratif untuk mempercantik tampilan.',
-            ];
+        typeof craft.estimatedMinutes === 'number'
+          ? craft.estimatedMinutes
+          : parseInt(craft.estimatedTime || '25', 10) || 25;
+
+      const description =
+        craft.description ||
+        craft.briefDescription ||
+        craft.summary ||
+        `Proyek upcycle kreatif dari limbah ${itemName} bernilai fungsi dan estetika tinggi.`;
+
+      const tools = Array.isArray(craft.tools) && craft.tools.length > 0
+        ? craft.tools
+        : ['Gunting / cutter', 'Lem serbaguna'];
+
+      const materialsNeeded = Array.isArray(craft.materialsNeeded) && craft.materialsNeeded.length > 0
+        ? craft.materialsNeeded
+        : [itemName, ...tools];
+
+      const steps = Array.isArray(craft.steps) && craft.steps.length > 0
+        ? craft.steps
+        : [
+            `Bersihkan ${itemName} dari residu atau kotoran.`,
+            'Bentuk atau potong pola kreasi sesuai ukuran yang diinginkan.',
+            'Rakit dan satukan komponen dengan perekat kokoh.',
+            'Lakukan finishing dekoratif agar rapi dan estetik.',
+          ];
 
       return {
-        id: idea.id || `upcycle-rec-${Date.now()}-${idx + 1}`,
+        id: craft.id || `craft-${Date.now()}-${idx + 1}`,
         title,
         difficulty,
         estimatedMinutes,
-        estimatedTime,
+        description,
         tools,
-        briefDescription,
-        summary: briefDescription,
-        benchmarkPrice:
-          idea.benchmarkPrice ||
-          (idx === 0 ? 'Rp 35.000 - Rp 65.000' : idx === 1 ? 'Rp 25.000 - Rp 45.000' : 'Rp 20.000 - Rp 35.000'),
         materialsNeeded,
         steps,
-        auxiliaryCost: idea.auxiliaryCost || 'Rp 5.000 - Rp 15.000',
-        finishingTips:
-          idea.finishingTips ||
-          'Beri lapisan pelindung anti air untuk ketahanan jangka panjang dan daya tarik estetik.',
+        estimatedTime: `${estimatedMinutes} Menit`,
+        benchmarkPrice: craft.benchmarkPrice || (idx === 0 ? 'Rp 35.000 - Rp 65.000' : idx === 1 ? 'Rp 25.000 - Rp 45.000' : 'Rp 20.000 - Rp 35.000'),
+        summary: description,
+        auxiliaryCost: craft.auxiliaryCost || 'Rp 5.000 - Rp 15.000',
+        finishingTips: craft.finishingTips || 'Gunakan sentuhan warna matte atau earthy untuk tampilan modern.',
       };
     });
 
-    const detectedObject = {
-      label: sanitizedItemName,
-      material: sanitizedMaterial,
-      dimension:
-        parsedJson.dimension ||
-        parsedJson.detectedObject?.dimension ||
-        'Ukuran Standar (~500-600ml)',
-      condition:
-        parsedJson.condition ||
-        parsedJson.detectedObject?.condition ||
-        'Bersih & Layak Upcycle',
-      estimatedScrapValue:
-        parsedJson.estimatedScrapValue ||
-        parsedJson.detectedObject?.estimatedScrapValue ||
-        'Rp 3.500 - Rp 6.000 / kg',
+    const wasteScanResult: WasteScanResult = {
+      itemName,
+      materialCategory,
+      condition,
+      estimatedDimensions,
+      marketPriceRange,
+      upcyclePotential,
+      recommendedCrafts: recommendedCrafts.map((c: any) => ({
+        title: c.title,
+        difficulty: c.difficulty,
+        estimatedMinutes: c.estimatedMinutes,
+        description: c.description,
+      })),
     };
 
-    const finalResult: WasteAnalysisResult = {
+    const finalAnalysisResult: WasteAnalysisResult = {
       isDetected: true,
-      userFriendlyMessage:
-        parsedJson.userFriendlyMessage ||
-        `Objek ${sanitizedItemName} di latar depan berhasil diidentifikasi.`,
-      detectedObject,
-      recommendations: normalizedIdeas,
+      userFriendlyMessage: `Objek ${itemName} berhasil dianalisis oleh AI Scanner BumiKita.`,
+      detectedObject: {
+        label: itemName,
+        material: materialCategory,
+        dimension: estimatedDimensions,
+        condition,
+        estimatedScrapValue: marketPriceRange,
+      },
+      recommendations: recommendedCrafts,
+      ...wasteScanResult,
     };
 
     return NextResponse.json({
       success: true,
       isDetected: true,
-      itemName: sanitizedItemName,
-      materialCategory: sanitizedMaterial,
-      confidenceScore,
-      recyclability,
-      upcycleIdeas: normalizedIdeas,
+      // Direct WasteScanResult keys at root
+      ...wasteScanResult,
+      // Backwards-compatible and nested data object
       data: {
-        ...finalResult,
-        itemName: sanitizedItemName,
-        materialCategory: sanitizedMaterial,
-        confidenceScore,
-        recyclability,
-        upcycleIdeas: normalizedIdeas,
-        detectedItemName: detectedObject.label,
-        detectedMaterialType: detectedObject.material,
-        projectName: normalizedIdeas[0]?.title || 'Kreasi Upcycling',
-        difficulty: normalizedIdeas[0]?.difficulty || 'Mudah',
-        timeEstimate: normalizedIdeas[0]?.estimatedTime || '25 Menit',
+        ...finalAnalysisResult,
+        ...wasteScanResult,
+        detectedItemName: itemName,
+        detectedMaterialType: materialCategory,
+        projectName: recommendedCrafts[0]?.title || 'Kreasi Upcycling',
+        difficulty: recommendedCrafts[0]?.difficulty || 'Mudah',
+        timeEstimate: `${recommendedCrafts[0]?.estimatedMinutes || 25} Menit`,
         estimatedValueIdr: 45000,
-        productDescription: normalizedIdeas[0]?.briefDescription,
-        requiredMaterials: normalizedIdeas[0]?.materialsNeeded,
-        toolsNeeded: normalizedIdeas[0]?.tools,
-        steps: normalizedIdeas[0]?.steps.map((st: string, i: number) => ({
+        productDescription: recommendedCrafts[0]?.description,
+        requiredMaterials: recommendedCrafts[0]?.materialsNeeded,
+        toolsNeeded: recommendedCrafts[0]?.tools,
+        steps: recommendedCrafts[0]?.steps.map((st: string, i: number) => ({
           stepNumber: i + 1,
           title: `Langkah ${i + 1}`,
           instruction: st,
@@ -607,36 +594,55 @@ export async function POST(req: NextRequest) {
         landfillDivertedGrams: 320,
       },
       modelUsed: activeModelUsed,
-      detectedItemName: detectedObject.label,
-      detectedMaterialType: detectedObject.material,
-      projectName: normalizedIdeas[0]?.title,
     });
   } catch (err: any) {
     console.error('Error in upcycle vision API route handler:', err);
-    const fallback = getHeuristicAnalysis('');
+    const dynamicFallback = getDynamicHeuristicAnalysis('');
     return NextResponse.json({
       success: true,
       isDetected: true,
+      ...dynamicFallback,
       data: {
-        ...fallback,
-        detectedItemName: fallback.detectedObject.label,
-        detectedMaterialType: fallback.detectedObject.material,
-        projectName: fallback.recommendations[0]?.title,
-        difficulty: fallback.recommendations[0]?.difficulty,
-        timeEstimate: fallback.recommendations[0]?.estimatedTime,
-        estimatedValueIdr: 45000,
-        productDescription: fallback.recommendations[0]?.summary,
-        requiredMaterials: fallback.recommendations[0]?.materialsNeeded,
-        toolsNeeded: ['Gunting', 'Lem serbaguna'],
-        steps: fallback.recommendations[0]?.steps.map((st, i) => ({
-          stepNumber: i + 1,
-          title: `Langkah ${i + 1}`,
-          instruction: st,
+        ...dynamicFallback,
+        detectedObject: {
+          label: dynamicFallback.itemName,
+          material: dynamicFallback.materialCategory,
+          dimension: dynamicFallback.estimatedDimensions,
+          condition: dynamicFallback.condition,
+          estimatedScrapValue: dynamicFallback.marketPriceRange,
+        },
+        recommendations: dynamicFallback.recommendedCrafts.map((c, idx) => ({
+          id: `rec-fallback-${idx + 1}`,
+          title: c.title,
+          difficulty: c.difficulty,
+          estimatedTime: `${c.estimatedMinutes} Menit`,
+          benchmarkPrice: 'Rp 30.000 - Rp 50.000',
+          summary: c.description,
+          materialsNeeded: [dynamicFallback.itemName, 'Gunting', 'Lem'],
+          steps: [
+            'Bersihkan bahan sampah hingga bersih dan kering.',
+            'Potong dan bentuk komponen sesuai pola.',
+            'Rakit dan berikan sentuhan akhir.',
+          ],
         })),
-        co2SavedKg: 2.5,
-        landfillDivertedGrams: 300,
+        detectedItemName: dynamicFallback.itemName,
+        detectedMaterialType: dynamicFallback.materialCategory,
+        projectName: dynamicFallback.recommendedCrafts[0]?.title,
+        difficulty: dynamicFallback.recommendedCrafts[0]?.difficulty,
+        timeEstimate: `${dynamicFallback.recommendedCrafts[0]?.estimatedMinutes} Menit`,
+        estimatedValueIdr: 35000,
+        productDescription: dynamicFallback.recommendedCrafts[0]?.description,
+        requiredMaterials: [dynamicFallback.itemName, 'Lem serbaguna'],
+        toolsNeeded: ['Gunting', 'Lem'],
+        steps: [
+          { stepNumber: 1, title: 'Langkah 1', instruction: 'Bersihkan bahan hingga siap diolah.' },
+          { stepNumber: 2, title: 'Langkah 2', instruction: 'Potong dan bentuk kreasi.' },
+          { stepNumber: 3, title: 'Langkah 3', instruction: 'Finishing rapi.' },
+        ],
+        co2SavedKg: 2.0,
+        landfillDivertedGrams: 200,
       },
-      modelUsed: 'heuristic-recovery',
+      modelUsed: 'contextual-recovery',
     });
   }
 }
