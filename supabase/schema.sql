@@ -266,7 +266,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- =============================================================================
--- 5. BUMIKITA - THREADS COMMUNITY SCHEMA (POSTS, COMMENTS, LIKES)
+-- 5. BUMIKITA - COMMUNITY SCHEMA (POSTS, COMMENTS, LIKES)
 -- =============================================================================
 
 -- Ensure username and role exist on profiles
@@ -347,5 +347,23 @@ CREATE POLICY "Authenticated users can insert likes" ON public.likes FOR INSERT 
 
 DROP POLICY IF EXISTS "Users can delete their own likes" ON public.likes;
 CREATE POLICY "Users can delete their own likes" ON public.likes FOR DELETE USING (auth.uid() = user_id);
+
+-- =============================================================================
+-- 6. COMMUNITY CLEANUP (ELIMINATE MOCK/SEED DATA SAFELY)
+-- =============================================================================
+-- Truncates dummy comments, likes, and posts while preserving user profiles
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'comments') THEN
+    TRUNCATE TABLE public.comments RESTART IDENTITY CASCADE;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'likes') THEN
+    TRUNCATE TABLE public.likes RESTART IDENTITY CASCADE;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'posts') THEN
+    TRUNCATE TABLE public.posts RESTART IDENTITY CASCADE;
+  END IF;
+END $$;
+
 
 

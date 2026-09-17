@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useRouter } from 'next/navigation';
 import { 
   Heart, 
   MessageCircle, 
@@ -9,13 +10,12 @@ import {
   Check, 
   Send, 
   Sparkles, 
-  CornerDownRight, 
-  User as UserIcon,
-  LogIn
+  LogIn,
+  Loader2
 } from 'lucide-react';
 import { CommunityPostItem, CommunityComment } from '@/src/lib/supabase';
 import { useAuth } from '@/src/context/AuthContext';
-import { togglePostLike, createCommunityComment } from '@/src/lib/communityService';
+import { togglePostLike, createCommunityComment, fetchPostComments } from '@/src/lib/communityService';
 
 interface PostCardProps {
   post: CommunityPostItem;
@@ -47,6 +47,7 @@ function formatIndonesianRelativeTime(dateString: string): string {
 
 export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const { user, profile, openAuthModal } = useAuth();
+  const router = useRouter();
 
   // Reactive state with local interaction overrides
   const [localLiked, setLocalLiked] = useState<boolean | null>(null);
@@ -54,20 +55,34 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const [isLiking, setIsLiking] = useState<boolean>(false);
 
   const [showComments, setShowComments] = useState<boolean>(false);
+  const [liveComments, setLiveComments] = useState<CommunityComment[] | null>(null);
   const [addedComments, setAddedComments] = useState<CommunityComment[]>([]);
   const [newCommentText, setNewCommentText] = useState<string>('');
   const [isSubmittingComment, setIsSubmittingComment] = useState<boolean>(false);
+  const [isLoadingComments, setIsLoadingComments] = useState<boolean>(false);
 
   const [copied, setCopied] = useState<boolean>(false);
 
   const isLiked = localLiked !== null ? localLiked : Boolean(post.is_liked);
   const likesCount = Math.max(0, (post.likes_count || 0) + likeDelta);
-  const allComments = [...(post.comments || []), ...addedComments];
+  
+  // Combine initial post comments (or refreshed comments) with newly added ones
+  const baseComments = liveComments !== null ? liveComments : (post.comments || []);
+  const allComments = [...baseComments, ...addedComments];
 
-  // Handle Optimistic Like Toggle
+  // Helper to redirect unauthenticated visitors
+  const handleUnauthenticatedRedirect = (actionName: string) => {
+    if (openAuthModal) {
+      openAuthModal('login', `Silakan masuk terlebih dahulu untuk ${actionName}.`);
+    } else {
+      router.push('/auth?mode=login');
+    }
+  };
+
+  // Handle Optimistic Like Toggle backed by live Supabase mutation
   const handleToggleLike = async () => {
     if (!user) {
-      openAuthModal('login', 'Silakan masuk terlebih dahulu untuk menyukai postingan ini.');
+      handleUnauthenticatedRedirect('menyukai postingan ini');
       return;
     }
 
@@ -103,13 +118,32 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
     }
   };
 
-  // Handle Submit Comment
+  // Handle Comments Drawer Toggle with live refresh
+  const handleToggleComments = async () => {
+    const nextShow = !showComments;
+    setShowComments(nextShow);
+
+    if (nextShow && liveComments === null) {
+      setIsLoadingComments(true);
+      try {
+        const freshComments = await fetchPostComments(post.id);
+        setLiveComments(freshComments);
+        setAddedComments([]);
+      } catch (err) {
+        console.error('Failed to fetch fresh comments:', err);
+      } finally {
+        setIsLoadingComments(false);
+      }
+    }
+  };
+
+  // Handle Submit Comment directly to public.comments
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCommentText.trim() || isSubmittingComment) return;
 
     if (!user) {
-      openAuthModal('login', 'Silakan masuk untuk menulis komentar pada diskusi ini.');
+      handleUnauthenticatedRedirect('menulis komentar pada diskusi ini');
       return;
     }
 
@@ -139,13 +173,13 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
         if (onPostUpdated) {
           onPostUpdated({
             ...post,
-            comments: [...(post.comments || []), ...nextAdded],
+            comments: [...baseComments, ...nextAdded],
             comments_count: (post.comments_count || 0) + 1,
           });
         }
       }
     } catch (err) {
-      console.error('Failed to post comment:', err);
+      console.error('Failed to post live comment:', err);
     } finally {
       setIsSubmittingComment(false);
     }
@@ -163,7 +197,6 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
         setTimeout(() => setCopied(false), 2500);
       }
     } catch {
-      // Fallback
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     }
@@ -223,7 +256,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           type="button"
           onClick={handleShare}
           className="text-[#1A4D3A]/40 hover:text-[#357A59] transition-colors p-1"
-          title="Tautan thread ini"
+          title="Salin tautan postingan"
         >
           <span className="text-[11px] font-bold">#</span>
         </button>
@@ -275,7 +308,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           <button
             type="button"
             id={`btn-toggle-comments-${post.id}`}
-            onClick={() => setShowComments((prev) => !prev)}
+            onClick={handleToggleComments}
             className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer ${
               showComments
                 ? 'bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/30 shadow-clay-sm'
@@ -328,7 +361,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
         </div>
       </div>
 
-      {/* 4. Inline Drawer for Threaded Comments */}
+      {/* 4. Inline Drawer for Comments */}
       <AnimatePresence>
         {showComments && (
           <motion.div
@@ -339,16 +372,21 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
             className="overflow-hidden pt-4 mt-3 border-t border-[#1A4D3A]/10 space-y-3"
           >
             <div className="flex items-center justify-between text-xs font-extrabold text-[#1A4D3A]">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#FF9E20]" />
-                Diskusi & Tanggapan ({allComments.length})
+              <span>
+                Komentar ({allComments.length})
               </span>
+              {isLoadingComments && (
+                <span className="flex items-center gap-1 text-[10px] text-[#357A59]">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Memperbarui...</span>
+                </span>
+              )}
             </div>
 
-            {/* Comments List */}
-            {allComments.length === 0 ? (
-              <div className="p-4 rounded-2xl bg-white/70 border border-white text-center text-xs text-[#1A4D3A]/60 shadow-clay-sm">
-                Belum ada tanggapan untuk thread ini. Jadilah yang pertama berkomentar! 💬
+            {/* Comments List: strictly live records */}
+            {allComments.length === 0 && !isLoadingComments ? (
+              <div className="p-3.5 rounded-2xl bg-white/70 border border-white text-center text-xs text-[#1A4D3A]/60 shadow-clay-sm">
+                Belum ada komentar untuk postingan ini.
               </div>
             ) : (
               <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
@@ -413,7 +451,11 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                   disabled={!newCommentText.trim() || isSubmittingComment}
                   className="px-4 py-2.5 rounded-2xl bg-gradient-earth text-white text-xs font-black shadow-clay-button hover:scale-105 active:scale-95 disabled:opacity-50 disabled:pointer-events-none transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
                 >
-                  <Send className="w-3.5 h-3.5" />
+                  {isSubmittingComment ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
                   <span>Kirim</span>
                 </button>
               </form>
@@ -424,7 +466,8 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                 </span>
                 <button
                   type="button"
-                  onClick={() => openAuthModal('login', 'Silakan masuk untuk menulis komentar pada diskusi ini.')}
+                  id={`btn-comment-login-${post.id}`}
+                  onClick={() => handleUnauthenticatedRedirect('menulis komentar')}
                   className="px-3 py-1.5 rounded-xl bg-white text-[#357A59] border border-white font-extrabold shadow-clay-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
                 >
                   <LogIn className="w-3.5 h-3.5" />

@@ -1,7 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { SupabaseClient } from '@supabase/supabase-js';
 
-// Types for the Threads-Style Community feature
+// Types for the Community feature
 export interface CommunityProfile {
   id: string;
   full_name: string | null;
