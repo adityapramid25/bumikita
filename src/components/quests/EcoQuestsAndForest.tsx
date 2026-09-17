@@ -27,6 +27,8 @@ import {
   Info
 } from 'lucide-react';
 
+import ForestCampaignSection from './ForestCampaignSection';
+
 export default function EcoQuestsAndForest() {
   const { 
     daunPoints, 
@@ -104,8 +106,11 @@ export default function EcoQuestsAndForest() {
   const currentRank = getRank();
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-12 space-y-10">
-      {/* Header Banner */}
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-12 space-y-12">
+      {/* 1. Crowdfunded Forest Restoration Campaign (Bukit Soeharto Pilot) */}
+      <ForestCampaignSection />
+
+      {/* 2. Individual Tree Planting & Virtual Growth */}
       <div className="bg-[#FAF8F5] rounded-[32px] p-6 sm:p-10 shadow-clay-card border border-white space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-2 mt-1">
