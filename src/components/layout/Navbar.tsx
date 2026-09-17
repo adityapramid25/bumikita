@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion } from 'motion/react';
 import { useEco } from '@/src/context/EcoContext';
 import { useAuth } from '@/src/context/AuthContext';
 import { 
@@ -30,14 +31,31 @@ export default function Navbar() {
   const pathname = usePathname();
   const {
     daunPoints,
+    dailyMissions,
+    setIsMissionsOpen,
+    setNotificationToast,
     cart,
     setIsCartOpen,
     setIsRewardModalOpen,
     treesPlanted,
   } = useEco();
-  const { user, profile } = useAuth();
+  const { user, profile, openAuthModal } = useAuth();
 
   const totalCartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const hasUnclaimedMissions = dailyMissions.some((m) => !m.is_claimed);
+
+  const handleBadgeClick = () => {
+    if (!user) {
+      setNotificationToast({
+        message: 'Silakan masuk terlebih dahulu untuk mengklaim misi harian dan mengumpulkan Daun.',
+        icon: '🍃',
+      });
+      openAuthModal('login', 'Silakan masuk terlebih dahulu untuk mengklaim misi harian dan mengumpulkan Daun.');
+      return;
+    }
+    setIsMissionsOpen(true);
+  };
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
@@ -95,25 +113,45 @@ export default function Navbar() {
 
         {/* Right Section (Action Cluster) */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Points Pill ("480") */}
+          {/* Interactive Daun Points Badge (Connected to Daily Missions Modal) */}
           <div className="relative group shrink-0">
-            <button
+            <motion.button
               id="btn-daun-points-rewards"
-              onClick={() => setIsRewardModalOpen(true)}
-              className="px-3.5 py-1.5 sm:px-4 sm:py-2 text-sm font-semibold rounded-full bg-[#FAF8F5] shadow-clay-card flex items-center gap-1.5 border border-white/80 hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
-              title="Lihat Reward Daun Points"
+              type="button"
+              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.03 }}
+              onClick={handleBadgeClick}
+              className="relative inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl bg-[#FAF8F5] border border-white/80 shadow-clay-button hover:bg-white text-[#1A4D3A] font-bold text-xs sm:text-sm cursor-pointer transition-all active:scale-95 group select-none shrink-0"
+              title="Klik untuk Buka Misi Harian & Tambah Daun"
             >
-              <span className="flex items-center justify-center w-4 h-4 text-sm shrink-0">
-                🍃
-              </span>
-              <span className="text-sm font-bold text-[#1A4D3A]">{daunPoints}</span>
-              <Gift className="w-4 h-4 text-[#FF9E20] shrink-0" />
-            </button>
+              {/* Daun Icon & Micro-interaction */}
+              <span className="text-base group-hover:scale-110 transition-transform">🍃</span>
+
+              {/* Reactive Point Balance with Pulse Animation on Change */}
+              <motion.span
+                key={daunPoints}
+                initial={{ scale: 1.25, color: '#357A59' }}
+                animate={{ scale: 1, color: '#1A4D3A' }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="tracking-tight font-extrabold"
+              >
+                {profile?.daun_points ?? daunPoints}
+              </motion.span>
+
+              {/* Gift / Quest Indicator */}
+              <span className="text-xs text-amber-500 ml-0.5 animate-bounce">🎁</span>
+
+              {/* Unclaimed Quest Indicator Dot (if any active mission not claimed today) */}
+              {hasUnclaimedMissions && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white animate-pulse shadow-sm" />
+              )}
+            </motion.button>
 
             {/* Hover Tooltip */}
             <div className="absolute top-full right-0 mt-2 hidden group-hover:block z-50 pointer-events-none">
-              <div className="px-3 py-1.5 rounded-xl bg-[#FAF8F5] text-[#1A4D3A] text-[11px] font-bold shadow-clay-card border border-white whitespace-nowrap animate-in fade-in zoom-in-95 duration-200">
-                🎁 Tukar 400 Daun = 1 Pohon Nyata & Diskon Market
+              <div className="px-3.5 py-1.5 rounded-xl bg-[#FAF8F5] text-[#1A4D3A] text-[11px] font-bold shadow-clay-card border border-white whitespace-nowrap animate-in fade-in zoom-in-95 duration-200 flex items-center gap-1.5">
+                <span className="text-xs">✨</span>
+                <span>Klik untuk Buka Misi Harian & Tambah Daun</span>
               </div>
             </div>
           </div>

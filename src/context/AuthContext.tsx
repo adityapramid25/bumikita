@@ -22,8 +22,11 @@ interface AuthContextType {
   isLoading: boolean;
   isConfigured: boolean;
   isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
   authModalMode: 'login' | 'register';
-  openAuthModal: (mode?: 'login' | 'register') => void;
+  authNoticeMessage: string | null;
+  setAuthNoticeMessage: (msg: string | null) => void;
+  openAuthModal: (mode?: 'login' | 'register', notice?: string) => void;
   closeAuthModal: () => void;
   signUp: (params: SignUpParams) => Promise<{ success: boolean; error?: string; requiresEmailConfirmation?: boolean }>;
   signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
@@ -46,19 +49,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [authNoticeMessage, setAuthNoticeMessage] = useState<string | null>(null);
   const configured = isSupabaseConfigured();
 
-  const openAuthModal = useCallback((mode: 'login' | 'register' = 'login') => {
+  const openAuthModal = useCallback((mode: 'login' | 'register' = 'login', notice?: string) => {
     setAuthModalMode(mode);
-    if (typeof window !== 'undefined') {
-      window.location.href = `/auth?mode=${mode}`;
-    } else {
-      setIsAuthModalOpen(true);
-    }
+    setAuthNoticeMessage(notice ?? null);
+    setIsAuthModalOpen(true);
   }, []);
 
   const closeAuthModal = useCallback(() => {
     setIsAuthModalOpen(false);
+    setAuthNoticeMessage(null);
   }, []);
 
   // Fetch profile from Supabase profiles table
@@ -435,7 +437,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isConfigured: configured,
         isAuthModalOpen,
+        setIsAuthModalOpen,
         authModalMode,
+        authNoticeMessage,
+        setAuthNoticeMessage,
         openAuthModal,
         closeAuthModal,
         signUp,

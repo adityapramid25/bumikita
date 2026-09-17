@@ -87,6 +87,8 @@ interface EcoContextType {
   }>;
   isInsufficientModalOpen: boolean;
   setIsInsufficientModalOpen: (open: boolean) => void;
+  isMissionsOpen: boolean;
+  setIsMissionsOpen: (open: boolean) => void;
   co2SavedKg: number;
   wasteDivertedKg: number;
   treesPlanted: number;
@@ -157,6 +159,7 @@ export function EcoProvider({ children }: { children: React.ReactNode }) {
   const [dailyMissions, setDailyMissions] = useState<DailyMission[]>(DEFAULT_DAILY_MISSIONS);
   const [isDailyMissionsLoading, setIsDailyMissionsLoading] = useState<boolean>(false);
   const [isInsufficientModalOpen, setIsInsufficientModalOpen] = useState<boolean>(false);
+  const [isMissionsOpen, setIsMissionsOpen] = useState<boolean>(false);
 
   // Sync with profile daun_points if available from Supabase / AuthContext
   useEffect(() => {
@@ -670,6 +673,8 @@ export function EcoProvider({ children }: { children: React.ReactNode }) {
         claimDailyMission,
         isInsufficientModalOpen,
         setIsInsufficientModalOpen,
+        isMissionsOpen,
+        setIsMissionsOpen,
         co2SavedKg,
         wasteDivertedKg,
         treesPlanted,

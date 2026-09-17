@@ -7,15 +7,7 @@ import AuthCard from '@/src/components/auth/AuthCard';
 import { ArrowLeft, X, ShieldCheck, Leaf } from 'lucide-react';
 
 export default function AuthModal() {
-  const { isAuthModalOpen, authModalMode, closeAuthModal } = useAuth();
-
-  // Automatically redirect to /auth page instead of showing modal
-  useEffect(() => {
-    if (isAuthModalOpen && typeof window !== 'undefined') {
-      closeAuthModal();
-      window.location.href = `/auth?mode=${authModalMode}`;
-    }
-  }, [isAuthModalOpen, authModalMode, closeAuthModal]);
+  const { isAuthModalOpen, authModalMode, authNoticeMessage, closeAuthModal } = useAuth();
 
   // Prevent background body scroll while the full-screen takeover modal is active
   useEffect(() => {
@@ -86,9 +78,28 @@ export default function AuthModal() {
           </header>
 
           {/* Centered Auth Card Container */}
-          <main className="flex-1 flex items-center justify-center my-auto z-10 py-4">
+          <main className="flex-1 flex flex-col items-center justify-center my-auto z-10 py-4 w-full max-w-lg mx-auto">
+            {/* Gentle Informational Banner if opened with specific notice */}
+            {authNoticeMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full mb-4 p-4 rounded-3xl bg-[#FFF9E6] border border-[#FF9E20]/40 shadow-clay-card flex items-center gap-3 text-xs sm:text-sm font-bold text-[#1A4D3A]"
+              >
+                <div className="w-9 h-9 rounded-2xl bg-[#FF9E20]/20 flex items-center justify-center text-lg shrink-0 shadow-clay-sm">
+                  🍃
+                </div>
+                <div className="flex-1 leading-snug">
+                  {authNoticeMessage}
+                </div>
+              </motion.div>
+            )}
+
             <AuthCard
               defaultMode={authModalMode}
+              isModal={true}
+              onClose={closeAuthModal}
+              onSuccess={closeAuthModal}
             />
           </main>
 

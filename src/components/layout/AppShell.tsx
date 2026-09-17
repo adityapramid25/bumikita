@@ -11,6 +11,8 @@ import CartDrawer from '@/src/components/market/CartDrawer';
 import RewardModal from '@/src/components/rewards/RewardModal';
 import EcoAIAssistant from '@/src/components/chat/EcoAIAssistant';
 import InsufficientDaunModal from '@/src/components/scanner/InsufficientDaunModal';
+import DailyMissionsModal from '@/src/components/quests/DailyMissionsModal';
+import AuthModal from '@/src/components/auth/AuthModal';
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -43,6 +45,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
       <RewardModal />
       <EcoAIAssistant />
       <InsufficientDaunModal />
+      <DailyMissionsModal />
+      <AuthModal />
 
       {/* Footer */}
       <Footer />
