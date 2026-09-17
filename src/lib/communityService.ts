@@ -469,3 +469,85 @@ export async function createCommunityComment(params: {
     return { success: false, error: err.message || 'Gagal mengirim komentar' };
   }
 }
+
+/**
+ * Upload an image file directly to Supabase Storage ('community-images' bucket).
+ * File path: ${userId}/${Date.now()}-${sanitizedFileName}
+ * Falls back gracefully to 'avatars' bucket if 'community-images' is not provisioned yet.
+ */
+export async function uploadCommunityImage(
+  file: File,
+  userId: string
+): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
+  if (!isSupabaseConfigured()) {
+    return {
+      success: false,
+      error: 'Koneksi database Supabase belum terkonfigurasi.',
+    };
+  }
+
+  const supabase = createClient();
+  try {
+    const sanitizedFileName = file.name.replace(/\s+/g, '_');
+    const filePath = `${userId}/${Date.now()}-${sanitizedFileName}`;
+
+    let bucketName = 'community-images';
+    let { error: uploadError } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    // If bucket doesn't exist or isn't accessible, try fallback to avatars bucket
+    if (uploadError && (
+      uploadError.message.toLowerCase().includes('not found') ||
+      uploadError.message.toLowerCase().includes('bucket')
+    )) {
+      console.warn(`Storage bucket '${bucketName}' unavailable, attempting 'avatars' fallback:`, uploadError.message);
+      bucketName = 'avatars';
+      const fallbackResult = await supabase.storage
+        .from(bucketName)
+        .upload(`community/${filePath}`, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (!fallbackResult.error) {
+        uploadError = null;
+      } else {
+        console.error('Fallback storage upload also failed:', fallbackResult.error.message);
+      }
+    }
+
+    if (uploadError) {
+      console.error('Supabase storage upload failed:', uploadError.message);
+      return {
+        success: false,
+        error: `Gagal mengunggah foto: ${uploadError.message}`,
+      };
+    }
+
+    // Retrieve public URL
+    const targetPath = bucketName === 'avatars' ? `community/${filePath}` : filePath;
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(targetPath);
+
+    if (!publicUrl) {
+      return {
+        success: false,
+        error: 'Gagal mendapatkan tautan publik untuk foto yang diunggah.',
+      };
+    }
+
+    return { success: true, publicUrl };
+  } catch (err: any) {
+    console.error('Exception during community image upload:', err);
+    return {
+      success: false,
+      error: err.message || 'Terjadi kesalahan sistem saat mengunggah foto.',
+    };
+  }
+}
+

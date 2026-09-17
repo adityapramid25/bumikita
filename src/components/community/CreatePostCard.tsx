@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { 
@@ -8,26 +8,42 @@ import {
   Image as ImageIcon, 
   X, 
   AlertCircle,
-  Loader2
+  Loader2,
+  CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '@/src/context/AuthContext';
 import { CommunityPostItem, CommunityProfile } from '@/src/lib/supabase';
-import { createCommunityPost } from '@/src/lib/communityService';
+import { createCommunityPost, uploadCommunityImage } from '@/src/lib/communityService';
 
 interface CreatePostCardProps {
   onPostCreated: (newPost: CommunityPostItem) => void;
 }
 
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 export default function CreatePostCard({ onPostCreated }: CreatePostCardProps) {
   const { user, profile } = useAuth();
 
   const [content, setContent] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [showImageInput, setShowImageInput] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Unauthenticated guests see no post creation box
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Clean up object URLs to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  // Unauthenticated guests see no post creation card
   if (!user) {
     return null;
   }
@@ -40,26 +56,95 @@ export default function CreatePostCard({ onPostCreated }: CreatePostCardProps) {
     avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || null,
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setErrorMsg(null);
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+
+    // 1. File type validation
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      setErrorMsg('Format foto tidak didukung. Silakan gunakan format JPG, PNG, atau WebP.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // 2. File size validation (max 5MB)
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setErrorMsg('Ukuran foto terlalu besar. Maksimal ukuran foto adalah 5MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Revoke previous preview URL if any
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setSelectedFile(file);
+    setPreviewUrl(objectUrl);
+
+    // Reset native input value so user can pick the same file again if removed
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim() || isSubmitting) return;
 
     setErrorMsg(null);
     setIsSubmitting(true);
+    setStatusMessage(null);
 
     try {
+      let uploadedImageUrl: string | null = null;
+
+      // Step 1: Direct File Upload to Supabase Storage if an image was selected
+      if (selectedFile) {
+        setStatusMessage('Mengunggah foto kreasi...');
+        const uploadResult = await uploadCommunityImage(selectedFile, user.id);
+
+        if (!uploadResult.success || !uploadResult.publicUrl) {
+          setErrorMsg(uploadResult.error || 'Gagal mengunggah foto. Draf teks Anda tetap tersimpan.');
+          setIsSubmitting(false);
+          setStatusMessage(null);
+          return;
+        }
+
+        uploadedImageUrl = uploadResult.publicUrl;
+      }
+
+      // Step 2: Create live community post in Supabase
+      setStatusMessage('Menerbitkan postingan...');
       const result = await createCommunityPost({
         userId: user.id,
         content: content.trim(),
-        imageUrl: imageUrl.trim() || null,
+        imageUrl: uploadedImageUrl,
         authorProfile,
       });
 
       if (result.success && result.post) {
         onPostCreated(result.post);
+
+        // Reset text and file state
         setContent('');
-        setImageUrl('');
-        setShowImageInput(false);
+        handleRemovePhoto();
+        setStatusMessage(null);
 
         try {
           confetti({
@@ -70,12 +155,13 @@ export default function CreatePostCard({ onPostCreated }: CreatePostCardProps) {
           });
         } catch {}
       } else {
-        setErrorMsg(result.error || 'Gagal menerbitkan postingan.');
+        setErrorMsg(result.error || 'Gagal menerbitkan postingan. Draf teks Anda tetap aman.');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Terjadi kesalahan sistem saat membuat postingan.');
+      setErrorMsg(err.message || 'Terjadi kendala sistem saat menerbitkan postingan.');
     } finally {
       setIsSubmitting(false);
+      setStatusMessage(null);
     }
   };
 
@@ -83,7 +169,21 @@ export default function CreatePostCard({ onPostCreated }: CreatePostCardProps) {
   const maxChars = 500;
 
   return (
-    <div className="w-full bg-[#FCFBF8] border border-white/90 rounded-2xl p-4 sm:p-5 shadow-clay-card relative">
+    <div 
+      id="card-community-create-post"
+      className="w-full bg-[#FCFBF8] border border-white/90 rounded-2xl p-4 sm:p-5 shadow-clay-card relative transition-all"
+    >
+      {/* Hidden native file input with camera/gallery support */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        id="input-community-file-upload"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={handleFileSelect}
+        className="hidden"
+        disabled={isSubmitting}
+      />
+
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Author Header row */}
         <div className="flex items-center gap-3">
@@ -120,92 +220,98 @@ export default function CreatePostCard({ onPostCreated }: CreatePostCardProps) {
             onChange={(e) => setContent(e.target.value.slice(0, maxChars))}
             placeholder="Bagikan progres kreasi upcycle, ide daur ulang, atau tips hari ini..."
             rows={2}
-            className="w-full bg-white border border-[#1A4D3A]/10 rounded-xl p-3 text-xs sm:text-sm font-medium text-[#1A4D3A] placeholder-[#1A4D3A]/40 shadow-clay-inset focus:outline-none focus:ring-2 focus:ring-[#357A59]/40 resize-none transition-all"
+            disabled={isSubmitting}
+            className="w-full bg-white border border-[#1A4D3A]/10 rounded-xl p-3 text-xs sm:text-sm font-medium text-[#1A4D3A] placeholder-[#1A4D3A]/40 shadow-clay-inset focus:outline-none focus:ring-2 focus:ring-[#357A59]/40 resize-none transition-all disabled:opacity-60"
           />
           <div className="absolute right-2.5 bottom-2 text-[10px] font-bold text-[#1A4D3A]/40 pointer-events-none">
             {charCount}/{maxChars}
           </div>
         </div>
 
-        {/* Optional Image Preview and URL Input */}
+        {/* Seamless Claymorphic Image Preview with Loading Overlay & Remove Floating Button */}
         <AnimatePresence>
-          {showImageInput && (
+          {previewUrl && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="space-y-2 overflow-hidden"
+              id="container-community-image-preview"
+              initial={{ opacity: 0, scale: 0.95, height: 0 }}
+              animate={{ opacity: 1, scale: 1, height: 'auto' }}
+              exit={{ opacity: 0, scale: 0.95, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative rounded-2xl border border-white/60 shadow-clay-card overflow-hidden max-h-64 w-full bg-[#1A4D3A]/5 group"
             >
-              <div className="flex items-center gap-2">
-                <input
-                  type="url"
-                  id="input-community-image-url"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="Tempel URL tautan gambar (https://...)"
-                  className="flex-1 bg-white border border-[#1A4D3A]/15 rounded-xl px-3 py-1.5 text-xs text-[#1A4D3A] placeholder-[#1A4D3A]/40 shadow-clay-sm focus:outline-none focus:ring-1 focus:ring-[#357A59]"
-                />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                id="preview-community-post-image"
+                src={previewUrl}
+                alt="Pratinjau foto kreasi"
+                className="w-full max-h-64 object-cover block"
+              />
+
+              {/* Floating "X" (Delete/Remove) Button */}
+              {!isSubmitting && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setImageUrl('');
-                    setShowImageInput(false);
-                  }}
-                  className="w-7 h-7 rounded-lg bg-white border border-white shadow-clay-sm flex items-center justify-center text-[#1A4D3A]/60 hover:text-[#1A4D3A] cursor-pointer shrink-0"
-                  title="Tutup input gambar"
+                  id="btn-community-remove-photo"
+                  onClick={handleRemovePhoto}
+                  className="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-black/60 hover:bg-black text-white shadow-md transition-all active:scale-95 cursor-pointer backdrop-blur-xs flex items-center justify-center z-10"
+                  title="Hapus foto terpilih"
+                  aria-label="Hapus foto"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
-              </div>
+              )}
 
-              {imageUrl && (
-                <div className="relative rounded-xl overflow-hidden max-h-40 border border-[#1A4D3A]/10 shadow-clay-card mt-1">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={imageUrl}
-                    alt="Preview foto"
-                    className="w-full h-36 object-cover"
-                    onError={() => setErrorMsg('URL foto tidak dapat dimuat. Pastikan tautan gambar dapat diakses secara publik.')}
-                  />
-                  <div className="absolute top-2 right-2">
-                    <button
-                      type="button"
-                      onClick={() => setImageUrl('')}
-                      className="p-1 rounded-full bg-black/60 text-white hover:bg-black transition-colors"
-                      title="Hapus foto"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
+              {/* Subtle Loading Spinner / Overlay During Upload */}
+              {isSubmitting && (
+                <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px] flex flex-col items-center justify-center text-white p-3 z-20">
+                  <Loader2 className="w-7 h-7 animate-spin text-[#6DB677] mb-2" />
+                  <span className="text-xs font-bold tracking-wide text-white drop-shadow-sm">
+                    {statusMessage || 'Mengunggah foto...'}
+                  </span>
                 </div>
               )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Error Notification */}
+        {/* Error Notification with safe text retention indicator */}
         {errorMsg && (
-          <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-            <span>{errorMsg}</span>
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2"
+          >
+            <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <span>{errorMsg}</span>
+            </div>
+          </motion.div>
         )}
 
         {/* Action Toolbar */}
         <div className="flex items-center justify-between pt-1 border-t border-[#1A4D3A]/10">
-          <button
-            type="button"
-            id="btn-community-toggle-image"
-            onClick={() => setShowImageInput((prev) => !prev)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              showImageInput || imageUrl
-                ? 'bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20 shadow-clay-sm'
-                : 'bg-white text-[#1A4D3A]/70 border border-white hover:bg-[#FAF8F5] shadow-clay-sm'
-            }`}
-          >
-            <ImageIcon className="w-3.5 h-3.5 text-[#357A59]" />
-            <span className="text-[11px]">{imageUrl ? 'Foto Terpasang' : 'Foto'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              id="btn-community-pick-photo"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isSubmitting}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                selectedFile
+                  ? 'bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20 shadow-clay-sm'
+                  : 'bg-white text-[#1A4D3A]/70 border border-white hover:bg-[#FAF8F5] shadow-clay-sm'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              title={selectedFile ? 'Ganti foto yang dipilih' : 'Pilih foto dari perangkat'}
+            >
+              <ImageIcon className="w-3.5 h-3.5 text-[#357A59]" />
+              <span className="text-[11px]">
+                {selectedFile ? 'Foto Terpilih' : 'Foto'}
+              </span>
+              {selectedFile && (
+                <CheckCircle2 className="w-3 h-3 text-[#357A59] ml-0.5" />
+              )}
+            </button>
+          </div>
 
           <button
             type="submit"
@@ -216,7 +322,7 @@ export default function CreatePostCard({ onPostCreated }: CreatePostCardProps) {
             {isSubmitting ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Menerbitkan...</span>
+                <span>{statusMessage || 'Menerbitkan...'}</span>
               </>
             ) : (
               <>
