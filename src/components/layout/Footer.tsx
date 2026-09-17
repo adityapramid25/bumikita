@@ -13,14 +13,26 @@ export default function Footer() {
           {/* Brand & Manifesto */}
           <div className="md:col-span-5 space-y-3">
             <Link href="/" className="inline-block group">
-              <Image
-                src="/assets/logo.webp"
-                alt="BumiKita — Green Market, Upcycle, & Sustainable"
-                width={180}
-                height={45}
-                referrerPolicy="no-referrer"
-                className="h-10 w-auto object-contain transition-transform group-hover:scale-105"
-              />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white shadow-clay-card border border-[#1A4D3A]/10 overflow-hidden flex items-center justify-center p-1 shrink-0 transition-transform group-hover:scale-105">
+                  <Image
+                    src="/assets/logo-icon.webp"
+                    alt="BumiKita Icon"
+                    width={40}
+                    height={40}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xl font-extrabold text-[#1A4D3A] tracking-tight leading-none">
+                    BumiKita
+                  </span>
+                  <span className="text-[10px] sm:text-xs font-semibold tracking-wider text-[#357A59] uppercase mt-1">
+                    GREEN MARKET, UPCYCLE, & SUSTAINABLE
+                  </span>
+                </div>
+              </div>
             </Link>
             <p className="text-xs sm:text-sm text-[#1A4D3A]/70 leading-relaxed max-w-sm">
               Platform ekonomi sirkular & upcycle masa depan untuk Gen-Z Indonesia. Menghubungkan karya streetwear upcycle mahasiswa, scanner AI pendeteksi sampah bernilai, misi restorasi hutan ber-GPS, hingga peta titik drop-off reverse vending se-Indonesia.

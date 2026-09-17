@@ -64,26 +64,26 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full max-w-[100vw] overflow-x-hidden bg-[#F5F2ED] border-b border-[#1A4D3A]/10 px-3 py-2.5 sm:px-6 sm:py-3.5 transition-colors">
-      <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-1.5 sm:gap-4">
+    <header className="sticky top-0 z-40 w-full max-w-[100vw] overflow-x-hidden bg-[#F5F2ED] border-b border-[#1A4D3A]/10 px-3.5 py-2.5 sm:px-6 sm:py-3 transition-colors">
+      <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
         {/* Left Section (Brand & Logo) */}
         <Link 
           href="/"
-          className="flex items-center gap-2 cursor-pointer group select-none shrink-0"
+          className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group select-none shrink-0"
         >
           {/* Brand Icon */}
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#FAF8F5] shadow-clay-card border border-white/80 flex items-center justify-center p-1 transition-transform group-hover:scale-105 group-active:scale-95 shrink-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#FAF8F5] shadow-clay-card border border-white/80 flex items-center justify-center p-1 sm:p-1.5 transition-transform group-hover:scale-105 group-active:scale-95 shrink-0">
             <Image
               src="/assets/logo-icon.webp"
               alt="BumiKita"
-              width={32}
-              height={32}
+              width={40}
+              height={40}
               priority
               referrerPolicy="no-referrer"
               className="w-full h-full object-contain"
             />
           </div>
-          <span className="text-base sm:text-lg font-bold text-[#1A4D3A] tracking-tight shrink-0">
+          <span className="text-lg sm:text-xl font-extrabold tracking-tight text-[#1A4D3A] leading-none shrink-0">
             Bumi<span className="text-[#357A59]">Kita</span>
           </span>
         </Link>
