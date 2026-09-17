@@ -276,7 +276,7 @@ export default function HeroInteractiveScanner() {
   };
 
   return (
-    <section className="relative w-full pt-6 sm:pt-10 pb-12 sm:pb-16 px-4 sm:px-6 overflow-hidden">
+    <section className="relative w-full pt-8 sm:pt-12 pb-12 sm:pb-16 px-4 sm:px-6 overflow-hidden">
       {/* Subtle Ambient Clay Orbs for Depth */}
       <div className="absolute -top-16 -right-16 w-96 h-96 rounded-full bg-[#6DB677]/15 blur-3xl pointer-events-none -z-10" />
       <div className="absolute -bottom-16 -left-16 w-80 h-80 rounded-full bg-[#FF9E20]/10 blur-3xl pointer-events-none -z-10" />

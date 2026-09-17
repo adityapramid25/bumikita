@@ -84,10 +84,10 @@ export default function GreenMarket() {
   };
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-12 space-y-8">
       {/* Market Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="space-y-2">
+        <div className="space-y-2 mt-1 sm:mt-2">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1A4D3A] tracking-tight">
             Green Market Gen-Z
           </h2>

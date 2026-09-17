@@ -5,7 +5,7 @@ import WasteToWorthScanner from '@/src/components/scanner/WasteToWorthScanner';
 
 export default function ScannerPage() {
   return (
-    <div className="py-2">
+    <div className="pt-8 sm:pt-12 pb-16">
       <WasteToWorthScanner />
     </div>
   );

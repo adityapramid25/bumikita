@@ -563,7 +563,7 @@ export default function WasteToWorthScanner() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-4 space-y-6">
+    <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 space-y-6">
       {/* Hidden File Input */}
       <input 
         ref={fileInputRef}
@@ -574,8 +574,8 @@ export default function WasteToWorthScanner() {
       />
 
       {/* Header Banner */}
-      <div className="bg-gradient-clay p-5 sm:p-7 rounded-3xl shadow-clay-card border border-white flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+      <div className="bg-gradient-clay p-6 sm:p-8 rounded-3xl shadow-clay-card border border-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="mt-1">
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1A4D3A]">
             Waste-to-Worth <span className="text-[#357A59]">AI Scanner</span>
           </h1>

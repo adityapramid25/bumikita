@@ -10,11 +10,11 @@ export default function UserProfileDashboardPage() {
   const { user, profile, isLoading, isConfigured, openAuthModal, signOut } = useAuth();
 
   return (
-    <div className="min-h-screen bg-[#F5F2ED] py-8 sm:py-12 px-4 sm:px-6">
+    <div className="min-h-screen bg-[#F5F2ED] pt-8 sm:pt-12 pb-16 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Breadcrumb & Quick Actions Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-          <div className="space-y-1">
+          <div className="space-y-1.5 mt-1">
             <div className="flex items-center gap-2 text-xs font-bold text-[#1A4D3A]/60">
               <Link href="/" className="hover:text-[#1A4D3A] transition-colors">
                 Beranda

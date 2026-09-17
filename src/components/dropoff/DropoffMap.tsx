@@ -55,10 +55,10 @@ export default function DropoffMap() {
   };
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-12 space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-2">
+        <div className="space-y-2 mt-1">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1A4D3A] tracking-tight">
             Titik Drop-off & Smart Reverse Vending
           </h2>

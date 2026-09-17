@@ -102,11 +102,11 @@ export default function CommunityPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F2ED] py-4 sm:py-6 px-3.5 sm:px-6">
-      <main className="max-w-xl mx-auto space-y-4">
+    <div className="min-h-screen bg-[#F5F2ED] pt-8 sm:pt-12 pb-16 px-3.5 sm:px-6">
+      <main className="max-w-xl mx-auto space-y-5">
         {/* 1. Minimalist Top Navigation Bar */}
-        <header className="flex items-center justify-between pb-3 border-b border-[#1A4D3A]/10">
-          <h1 className="text-xl font-extrabold text-[#1A4D3A] tracking-tight">
+        <header className="flex items-center justify-between pb-3.5 border-b border-[#1A4D3A]/10 mt-1 sm:mt-2">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-[#1A4D3A] tracking-tight">
             Komunitas
           </h1>
 

@@ -5,7 +5,7 @@ import DropoffMap from '@/src/components/dropoff/DropoffMap';
 
 export default function DropoffPage() {
   return (
-    <div className="py-2">
+    <div className="pt-8 sm:pt-12 pb-16">
       <DropoffMap />
     </div>
   );

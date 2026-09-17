@@ -44,7 +44,7 @@ export default function PrivacyPolicyPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F5F2ED] text-[#1A4D3A] selection:bg-[#6DB677]/30 selection:text-[#1A4D3A] py-6 sm:py-10 px-4 sm:px-6">
+    <div className="min-h-screen w-full bg-[#F5F2ED] text-[#1A4D3A] selection:bg-[#6DB677]/30 selection:text-[#1A4D3A] pt-8 sm:pt-12 pb-16 px-4 sm:px-6">
       {/* Ambient background glow */}
       <div className="fixed top-0 right-0 w-96 h-96 rounded-full bg-[#6DB677]/15 blur-3xl pointer-events-none -z-10" />
       <div className="fixed bottom-0 left-0 w-96 h-96 rounded-full bg-[#FF9E20]/10 blur-3xl pointer-events-none -z-10" />

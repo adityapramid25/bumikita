@@ -18,7 +18,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-[80vh] w-full py-8 sm:py-12 px-4 sm:px-6">
+    <div className="min-h-[80vh] w-full pt-8 sm:pt-12 pb-16 px-4 sm:px-6">
       {/* Container */}
       <div className="max-w-2xl w-full mx-auto space-y-6">
         {/* Breadcrumb / Top Bar */}
