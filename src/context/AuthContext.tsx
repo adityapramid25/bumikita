@@ -28,7 +28,12 @@ interface AuthContextType {
   setAuthNoticeMessage: (msg: string | null) => void;
   openAuthModal: (mode?: 'login' | 'register', notice?: string) => void;
   closeAuthModal: () => void;
-  signUp: (params: SignUpParams) => Promise<{ success: boolean; error?: string; requiresEmailConfirmation?: boolean }>;
+  signUp: (params: SignUpParams) => Promise<{
+    success: boolean;
+    error?: string;
+    requiresEmailConfirmation?: boolean;
+    isDatabaseTriggerError?: boolean;
+  }>;
   signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ success: boolean; error?: string }>;
@@ -226,6 +231,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             full_name: fullName,
             nickname: nickname || undefined,
+            username: nickname || undefined,
             avatar_url: avatarUrl || undefined,
             role: role || 'student',
           },
@@ -233,7 +239,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        return { success: false, error: error.message };
+        const isDbError =
+          error.message.includes('Database error') ||
+          error.message.includes('saving new user') ||
+          error.message.includes('violates not-null constraint');
+        return {
+          success: false,
+          error: error.message,
+          isDatabaseTriggerError: isDbError,
+        };
       }
 
       if (data.user) {
@@ -251,7 +265,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Gagal mendaftar akun ke Supabase';
-      return { success: false, error: msg };
+      const isDbError = msg.includes('Database error') || msg.includes('saving new user');
+      return { success: false, error: msg, isDatabaseTriggerError: isDbError };
     }
   };
 

@@ -23,8 +23,84 @@ import {
   School,
   TreePine,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Copy,
+  Terminal,
+  ExternalLink,
+  Code2
 } from 'lucide-react';
+import { getSupabase } from '@/src/lib/supabase/client';
+
+const SQL_REPAIR_SCRIPT = `-- ==============================================================================
+-- BUMIKITA: Perbaikan Trigger handle_new_user() & Constraint NOT NULL
+-- Jalankan skrip ini di Supabase Dashboard -> SQL Editor -> Run
+-- ==============================================================================
+
+-- 1. Hapus constraint NOT NULL pada username & nickname
+ALTER TABLE public.profiles ALTER COLUMN username DROP NOT NULL;
+ALTER TABLE public.profiles ALTER COLUMN nickname DROP NOT NULL;
+
+-- 2. Perbarui trigger agar otomatis mengisi username & menangani duplikasi
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_full_name  TEXT;
+  v_nickname   TEXT;
+  v_username   TEXT;
+  v_avatar_url TEXT;
+  v_role       TEXT;
+  v_final_nick TEXT;
+  v_counter    INT := 0;
+BEGIN
+  v_full_name  := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', 'Eco Warrior');
+  v_nickname   := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'nickname', NEW.raw_user_meta_data->>'username')), '');
+  v_avatar_url := COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture', NULL);
+  v_role       := COALESCE(NEW.raw_user_meta_data->>'role', 'student');
+
+  IF v_nickname IS NULL THEN
+    v_nickname := 'eco_' || SUBSTRING(REPLACE(NEW.id::TEXT, '-', ''), 1, 8);
+  END IF;
+
+  v_final_nick := v_nickname;
+  WHILE EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE (nickname = v_final_nick OR username = v_final_nick) 
+      AND id <> NEW.id
+  ) LOOP
+    v_counter := v_counter + 1;
+    v_final_nick := v_nickname || '_' || v_counter;
+  END LOOP;
+  v_username := v_final_nick;
+
+  BEGIN
+    INSERT INTO public.profiles (
+      id, full_name, nickname, username, avatar_url, daun_points, trees_planted, eco_role, role
+    )
+    VALUES (
+      NEW.id, v_full_name, v_final_nick, v_username, v_avatar_url, 100, 0,
+      CASE WHEN v_role = 'creator' THEN 'artisan' ELSE 'citizen' END,
+      CASE 
+        WHEN v_role = 'creator' THEN 'Kreator Upcycle' 
+        WHEN v_role = 'school' THEN 'Sekolah Adiwiyata' 
+        ELSE 'Pelajar / Mahasiswa' 
+      END
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      full_name  = EXCLUDED.full_name,
+      nickname   = COALESCE(public.profiles.nickname, EXCLUDED.nickname),
+      username   = COALESCE(public.profiles.username, EXCLUDED.username),
+      avatar_url = COALESCE(public.profiles.avatar_url, EXCLUDED.avatar_url),
+      updated_at = timezone('utc'::text, now());
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'handle_new_user: %', SQLERRM;
+  END;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();`;
 
 export type AuthMode = 'login' | 'register';
 
@@ -95,6 +171,8 @@ export default function AuthCard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isTriggerError, setIsTriggerError] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
 
   // Modals
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -249,7 +327,33 @@ export default function AuthCard({
     }
 
     setIsSubmitting(true);
+    setIsTriggerError(false);
     const cleanNick = regNickname.trim().replace(/^@/, '');
+
+    // Check if nickname already taken in profiles table to give immediate clear feedback
+    if (cleanNick) {
+      const supabase = getSupabase();
+      if (supabase) {
+        try {
+          const { data: existingUser } = await supabase
+            .from('profiles')
+            .select('id')
+            .or(`nickname.ilike.${cleanNick},username.ilike.${cleanNick}`)
+            .limit(1)
+            .maybeSingle();
+
+          if (existingUser) {
+            setIsSubmitting(false);
+            setErrorMessage(`Nickname @${cleanNick} sudah digunakan pejuang lain. Silakan pilih handle unik lain.`);
+            setIsTriggerError(false);
+            return;
+          }
+        } catch (e) {
+          console.warn('Nickname uniqueness check warning:', e);
+        }
+      }
+    }
+
     const res = await signUp({
       email: regEmail.trim(),
       password: regPassword,
@@ -260,6 +364,7 @@ export default function AuthCard({
     setIsSubmitting(false);
 
     if (res.success) {
+      setIsTriggerError(false);
       setSubmitSuccess(
         `Akun berhasil dibuat! Bonus sambutan +100 Daun Points telah ditambahkan untuk ${regName.trim()}. ${onSuccess ? '' : 'Mengalihkan...'}`
       );
@@ -273,7 +378,18 @@ export default function AuthCard({
         }, 900);
       }
     } else {
-      setErrorMessage(res.error || 'Gagal mendaftar akun ke Supabase.');
+      const isDbError = Boolean(
+        res.isDatabaseTriggerError ||
+        res.error?.includes('Database error') ||
+        res.error?.includes('saving new user') ||
+        res.error?.includes('violates not-null constraint')
+      );
+      setIsTriggerError(isDbError);
+      if (isDbError) {
+        setErrorMessage('Database error saving new user: Trigger Supabase PostgreSQL menolak pembuatan profil karena kolom username bernilai NULL (Error Constraint 23502).');
+      } else {
+        setErrorMessage(res.error || 'Gagal mendaftar akun ke Supabase.');
+      }
     }
   };
 
@@ -333,6 +449,8 @@ export default function AuthCard({
               setMode('login');
               setErrorMessage(null);
               setSubmitSuccess(null);
+              setIsTriggerError(false);
+              setCopiedSql(false);
             }}
             className={`relative flex-1 py-2.5 text-xs sm:text-sm font-extrabold rounded-xl transition-all z-10 cursor-pointer ${
               mode === 'login' 
@@ -349,6 +467,8 @@ export default function AuthCard({
               setMode('register');
               setErrorMessage(null);
               setSubmitSuccess(null);
+              setIsTriggerError(false);
+              setCopiedSql(false);
             }}
             className={`relative flex-1 py-2.5 text-xs sm:text-sm font-extrabold rounded-xl transition-all z-10 cursor-pointer ${
               mode === 'register' 
@@ -387,17 +507,83 @@ export default function AuthCard({
           )}
         </AnimatePresence>
 
-        {/* Dynamic Error Notice */}
+        {/* Dynamic Error Notice & Actionable Database Trigger Diagnostic */}
         <AnimatePresence>
           {errorMessage && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-6 p-3.5 rounded-2xl bg-[#FDF2F2] border border-[#DC2626]/20 shadow-clay-sm flex items-center gap-2.5 text-xs text-[#DC2626] z-10 relative"
+              className="mb-6 space-y-3 z-10 relative"
             >
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span className="font-semibold">{errorMessage}</span>
+              <div className="p-3.5 rounded-2xl bg-[#FDF2F2] border border-[#DC2626]/20 shadow-clay-sm flex items-start gap-2.5 text-xs text-[#DC2626]">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 font-semibold leading-relaxed">
+                  {errorMessage}
+                </div>
+              </div>
+
+              {isTriggerError && (
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-[#FAF8F5] to-[#F3EFEA] border border-[#E0D7CC] shadow-clay-sm space-y-3 text-xs text-[#1A4D3A]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-black text-[#1A4D3A] text-xs sm:text-sm">
+                      <Terminal className="w-4 h-4 text-[#357A59]" />
+                      <span>Solusi 1-Menit: Skrip SQL Perbaikan Trigger</span>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F5E9] text-[#2E7D32] border border-[#A5D6A7]">
+                      Siap Digunakan
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-[#1A4D3A]/80 leading-relaxed">
+                    Masalah ini terjadi karena trigger <code className="bg-[#EAE4DC] px-1 py-0.5 rounded font-mono text-[#1A4D3A]">handle_new_user()</code> di database Supabase belum menangani kolom <code className="bg-[#EAE4DC] px-1 py-0.5 rounded font-mono text-[#1A4D3A]">username</code> (NOT NULL). Jalankan skrip ini sekali di SQL Editor Supabase:
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(SQL_REPAIR_SCRIPT);
+                        setCopiedSql(true);
+                        setTimeout(() => setCopiedSql(false), 3500);
+                      }}
+                      className="flex-1 py-2 px-3 rounded-xl bg-gradient-earth text-white font-bold text-xs flex items-center justify-center gap-2 shadow-clay-sm hover:opacity-95 transition-all cursor-pointer"
+                    >
+                      {copiedSql ? (
+                        <>
+                          <Check className="w-4 h-4 text-[#A5D6A7]" />
+                          <span>Skrip SQL Tersalin ke Clipboard!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          <span>Salin Skrip SQL Perbaikan (1-Klik)</span>
+                        </>
+                      )}
+                    </button>
+
+                    <a
+                      href="https://supabase.com/dashboard/project/owiygitzmhsmygbfkpnb/sql/new"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2 px-3 rounded-xl bg-white/90 hover:bg-white text-[#1A4D3A] font-bold text-xs flex items-center justify-center gap-1.5 border border-[#1A4D3A]/15 shadow-clay-sm transition-all"
+                    >
+                      <span>Buka SQL Editor</span>
+                      <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+                    </a>
+                  </div>
+
+                  <div className="text-[11px] text-[#1A4D3A]/70 bg-white/70 p-2.5 rounded-xl border border-white/80 space-y-1">
+                    <p className="font-bold text-[#1A4D3A]">Langkah Cepat:</p>
+                    <ol className="list-decimal list-inside space-y-0.5 text-[11px]">
+                      <li>Klik <b>Salin Skrip SQL Perbaikan (1-Klik)</b> di atas</li>
+                      <li>Buka <b>Supabase Dashboard &gt; SQL Editor &gt; New Query</b></li>
+                      <li>Tempel (Paste) lalu klik tombol hijau <b>Run</b></li>
+                      <li>Kembali ke sini dan klik tombol <b>Daftar Akun Baru</b></li>
+                    </ol>
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
