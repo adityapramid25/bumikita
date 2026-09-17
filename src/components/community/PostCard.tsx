@@ -16,6 +16,7 @@ import {
 import { CommunityPostItem, CommunityComment } from '@/src/lib/supabase';
 import { useAuth } from '@/src/context/AuthContext';
 import { togglePostLike, createCommunityComment, fetchPostComments } from '@/src/lib/communityService';
+import SharePostModal from '@/src/components/community/SharePostModal';
 
 interface PostCardProps {
   post: CommunityPostItem;
@@ -61,7 +62,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const [isSubmittingComment, setIsSubmittingComment] = useState<boolean>(false);
   const [isLoadingComments, setIsLoadingComments] = useState<boolean>(false);
 
-  const [copied, setCopied] = useState<boolean>(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
 
   const isLiked = localLiked !== null ? localLiked : Boolean(post.is_liked);
   const likesCount = Math.max(0, (post.likes_count || 0) + likeDelta);
@@ -185,21 +186,9 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
     }
   };
 
-  // Handle Share to Clipboard with Direct #post-[id] Anchor
-  const handleShare = async () => {
-    try {
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://bumikita.id';
-      const postUrl = `${origin}/community#post-${post.id}`;
-
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(postUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2500);
-      }
-    } catch {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    }
+  // Handle Opening Multi-Platform Interactive Share Modal
+  const handleOpenShareModal = () => {
+    setIsShareModalOpen(true);
   };
 
   const authorName = post.profiles?.full_name || 'Eco Warrior';
@@ -254,9 +243,9 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
         {/* Anchor link helper icon */}
         <button
           type="button"
-          onClick={handleShare}
+          onClick={handleOpenShareModal}
           className="text-[#1A4D3A]/40 hover:text-[#357A59] transition-colors p-1"
-          title="Salin tautan postingan"
+          title="Bagikan postingan ini"
         >
           <span className="text-[11px] font-bold">#</span>
         </button>
@@ -321,44 +310,17 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           </button>
         </div>
 
-        {/* Share Button with Dynamic Feedback */}
-        <div className="relative">
-          <button
-            type="button"
-            id={`btn-share-${post.id}`}
-            onClick={handleShare}
-            className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer ${
-              copied
-                ? 'bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/40 shadow-clay-sm'
-                : 'bg-white text-[#1A4D3A]/75 border border-white shadow-clay-sm hover:bg-[#FAF8F5] hover:text-[#357A59] active:scale-95'
-            }`}
-            title="Salin tautan langsung ke postingan ini"
-          >
-            {copied ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-[#357A59]" />
-                <span className="text-xs font-black text-[#357A59]">Tersalin!</span>
-              </>
-            ) : (
-              <>
-                <Share2 className="w-3.5 h-3.5 text-[#FF9E20]" />
-                <span className="text-xs font-black">Bagikan</span>
-              </>
-            )}
-          </button>
-
-          {/* Feedback Tooltip if copied */}
-          {copied && (
-            <motion.div
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="absolute right-0 bottom-full mb-1.5 px-2.5 py-1 rounded-xl bg-[#1A4D3A] text-white text-[10px] font-black shadow-lg whitespace-nowrap pointer-events-none"
-            >
-              Tautan #{post.id.slice(0, 6)} tersalin! 📋
-            </motion.div>
-          )}
-        </div>
+        {/* Share Button Triggering Multi-Platform Claymorphic Popup Modal */}
+        <button
+          type="button"
+          id={`btn-share-${post.id}`}
+          onClick={handleOpenShareModal}
+          className="px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer bg-white text-[#1A4D3A]/75 border border-white shadow-clay-sm hover:bg-[#FAF8F5] hover:text-[#357A59] active:scale-95"
+          title="Bagikan aksi ini ke WhatsApp, Instagram, X, Telegram, LinkedIn, atau Salin Tautan"
+        >
+          <Share2 className="w-3.5 h-3.5 text-[#FF9E20]" />
+          <span className="text-xs font-black">Bagikan</span>
+        </button>
       </div>
 
       {/* 4. Inline Drawer for Comments */}
@@ -478,6 +440,13 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 5. Multi-Platform Interactive Share Modal */}
+      <SharePostModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        post={post}
+      />
     </article>
   );
 }
