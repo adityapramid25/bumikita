@@ -1,6 +1,6 @@
 {
   "name": "BumiKita",
-  "description": "Green Market, AI Upcycle, & Sustainable Hub untuk Gen Z Indonesia — ubah sampah jadi karya bernilai, jelajahi pasar upcycle, selesaikan misi restorasi hutan, dan temukan titik drop-off reverse vending terdekat.",
+  "description": "BumiKita: Green Market, Upcycle, & Sustainable. Platform ekonomi sirkular berbasis AI untuk mengubah sampah menjadi karya bernilai jual dan aksi nyata pelestarian lingkungan.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -434,7 +434,10 @@ export default function AuthCard({
               Bumi<span className="text-[#357A59]">Kita</span>
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-[#1A4D3A]/70 font-medium">
+          <p className="text-[10px] sm:text-[11px] font-bold text-[#357A59] tracking-wider uppercase">
+            Green Market, Upcycle, & Sustainable
+          </p>
+          <p className="text-xs sm:text-sm text-[#1A4D3A]/70 font-medium pt-0.5">
             {mode === 'login'
               ? 'Masuk untuk memantau aksi hijau, poin daun & toko upcycle-mu.'
               : 'Mulai langkah kecilmu menjadi solusi krisis sampah Indonesia.'}

@@ -77,9 +77,12 @@ export default function Navbar() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-lg sm:text-xl font-bold tracking-tight text-[#1A4D3A] shrink-0">
+          <div className="flex flex-col shrink-0">
+            <span className="text-lg sm:text-xl font-black tracking-tight text-[#1A4D3A] shrink-0 leading-none">
               Bumi<span className="text-[#357A59]">Kita</span>
+            </span>
+            <span className="hidden sm:inline-block text-[9px] font-bold text-[#357A59] tracking-wider uppercase mt-0.5">
+              Green Market, Upcycle, & Sustainable
             </span>
           </div>
         </Link>

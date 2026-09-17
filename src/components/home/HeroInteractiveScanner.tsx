@@ -288,6 +288,12 @@ export default function HeroInteractiveScanner() {
           
           {/* LEFT COLUMN (5 Cols): Punchy Value Proposition */}
           <div className="lg:col-span-5 space-y-6">
+            {/* Brand Slogan Pill */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#EBF4EE] border border-[#6DB677]/40 shadow-clay-sm text-xs font-extrabold text-[#1A4D3A]">
+              <span className="w-2 h-2 rounded-full bg-[#059669] animate-pulse" />
+              <span>Green Market, Upcycle, & Sustainable</span>
+            </div>
+
             {/* Headline: Exactly 6 words */}
             <h1 className="text-4xl sm:text-5xl lg:text-5xl font-black text-[#1A4D3A] tracking-tight leading-[1.08]">
               Ubah Sampah Jadi Cuan & Karya.

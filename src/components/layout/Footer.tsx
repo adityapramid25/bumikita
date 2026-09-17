@@ -15,9 +15,14 @@ export default function Footer() {
               <div className="w-10 h-10 rounded-2xl bg-gradient-earth flex items-center justify-center text-white shadow-clay-sm group-hover:scale-105 transition-transform">
                 <Leaf className="w-5 h-5" />
               </div>
-              <span className="font-extrabold text-xl tracking-tight text-[#1A4D3A]">
-                Bumi<span className="text-[#357A59]">Kita</span>
-              </span>
+              <div>
+                <span className="font-extrabold text-xl tracking-tight text-[#1A4D3A] block leading-tight">
+                  Bumi<span className="text-[#357A59]">Kita</span>
+                </span>
+                <span className="text-[10px] font-bold text-[#357A59] tracking-wider uppercase block">
+                  Green Market, Upcycle, & Sustainable
+                </span>
+              </div>
             </Link>
             <p className="text-xs sm:text-sm text-[#1A4D3A]/70 leading-relaxed max-w-sm">
               Platform ekonomi sirkular & upcycle masa depan untuk Gen-Z Indonesia. Menghubungkan karya streetwear upcycle mahasiswa, scanner AI pendeteksi sampah bernilai, misi restorasi hutan ber-GPS, hingga peta titik drop-off reverse vending se-Indonesia.
@@ -125,7 +130,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="pt-6 border-t border-[#1A4D3A]/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#1A4D3A]/70">
           <p>
-            © 2026 BumiKita. Hak Cipta Dilindungi. Dikembangkan oleh{' '}
+            © 2026 BumiKita — Green Market, Upcycle, & Sustainable. Dikembangkan oleh{' '}
             <span className="font-semibold text-[#1A4D3A] hover:text-[#357A59] transition-colors">
               Tim Smartova
             </span>{' '}

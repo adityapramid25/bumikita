@@ -101,7 +101,7 @@ export default function AuthModal() {
           {/* Minimalist Footnote Strip */}
           <footer className="max-w-5xl w-full mx-auto text-center pt-4 pb-2 text-xs text-[#1A4D3A]/50 z-10 shrink-0 flex items-center justify-center gap-2">
             <Leaf className="w-3.5 h-3.5 text-[#357A59]" />
-            <span>© 2026 BumiKita — Dikembangkan oleh Tim Smartova untuk bumi Indonesia.</span>
+            <span>© 2026 BumiKita — Green Market, Upcycle, & Sustainable. Dikembangkan oleh Tim Smartova untuk bumi Indonesia.</span>
           </footer>
         </motion.div>
       )}

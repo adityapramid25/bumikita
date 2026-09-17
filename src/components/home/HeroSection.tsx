@@ -36,6 +36,11 @@ export default function HeroSection() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Left Content Column */}
             <div className="lg:col-span-7 space-y-6">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#EBF4EE] border border-[#6DB677]/40 shadow-clay-sm text-xs font-extrabold text-[#1A4D3A]">
+                <span className="w-2 h-2 rounded-full bg-[#059669] animate-pulse" />
+                <span>BumiKita • Green Market, Upcycle, & Sustainable</span>
+              </div>
+
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#1A4D3A] tracking-tight leading-[1.15]">
                 Ubah Sampah Jadi <span className="text-[#357A59] underline decoration-[#6DB677]/50 decoration-wavy decoration-2">Cuan & Karya</span>, Selamatkan Bumi.
               </h1>
