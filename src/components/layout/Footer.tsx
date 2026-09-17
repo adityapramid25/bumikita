@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Leaf, Heart, Globe, Droplet, Sparkles, MapPin, TreePine, ShoppingBag, Users, School } from 'lucide-react';
 
 export default function Footer() {
@@ -11,18 +12,15 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
           {/* Brand & Manifesto */}
           <div className="md:col-span-5 space-y-3">
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-earth flex items-center justify-center text-white shadow-clay-sm group-hover:scale-105 transition-transform">
-                <Leaf className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="font-extrabold text-xl tracking-tight text-[#1A4D3A] block leading-tight">
-                  Bumi<span className="text-[#357A59]">Kita</span>
-                </span>
-                <span className="text-[10px] font-bold text-[#357A59] tracking-wider uppercase block">
-                  Green Market, Upcycle, & Sustainable
-                </span>
-              </div>
+            <Link href="/" className="inline-block group">
+              <Image
+                src="/assets/logo.webp"
+                alt="BumiKita — Green Market, Upcycle, & Sustainable"
+                width={180}
+                height={45}
+                referrerPolicy="no-referrer"
+                className="h-10 w-auto object-contain transition-transform group-hover:scale-105"
+              />
             </Link>
             <p className="text-xs sm:text-sm text-[#1A4D3A]/70 leading-relaxed max-w-sm">
               Platform ekonomi sirkular & upcycle masa depan untuk Gen-Z Indonesia. Menghubungkan karya streetwear upcycle mahasiswa, scanner AI pendeteksi sampah bernilai, misi restorasi hutan ber-GPS, hingga peta titik drop-off reverse vending se-Indonesia.

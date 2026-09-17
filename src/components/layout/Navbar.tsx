@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { motion } from 'motion/react';
 import { useEco } from '@/src/context/EcoContext';
@@ -70,20 +71,17 @@ export default function Navbar() {
           href="/"
           className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group select-none shrink-0"
         >
-          {/* Logo Container */}
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-earth p-0.5 shadow-clay-green flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95 shrink-0">
-            <div className="w-full h-full bg-[#FAF8F5] rounded-[14px] flex items-center justify-center text-[#1A4D3A]">
-              <Leaf className="w-6 h-6 text-[#357A59] fill-[#6DB677]/40" />
-            </div>
-          </div>
-
-          <div className="flex flex-col shrink-0">
-            <span className="text-lg sm:text-xl font-black tracking-tight text-[#1A4D3A] shrink-0 leading-none">
-              Bumi<span className="text-[#357A59]">Kita</span>
-            </span>
-            <span className="hidden sm:inline-block text-[9px] font-bold text-[#357A59] tracking-wider uppercase mt-0.5">
-              Green Market, Upcycle, & Sustainable
-            </span>
+          {/* Brand Logo */}
+          <div className="h-9 sm:h-11 flex items-center transition-transform group-hover:scale-105 group-active:scale-95 shrink-0">
+            <Image
+              src="/assets/logo.webp"
+              alt="BumiKita — Green Market, Upcycle, & Sustainable"
+              width={180}
+              height={45}
+              priority
+              referrerPolicy="no-referrer"
+              className="h-9 sm:h-10 w-auto object-contain"
+            />
           </div>
         </Link>
 
@@ -205,12 +203,17 @@ export default function Navbar() {
                     <img
                       src={profile.avatar_url}
                       alt={profile.full_name || 'Avatar'}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/assets/avatar-placeholder.webp';
+                      }}
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span>
-                      {(profile?.full_name || user.email || 'U')[0].toUpperCase()}
-                    </span>
+                    <img
+                      src="/assets/avatar-placeholder.webp"
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
                   )}
                 </div>
                 <div className="hidden md:flex flex-col text-left pr-2">

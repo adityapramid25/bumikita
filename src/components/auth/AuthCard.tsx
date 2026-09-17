@@ -206,10 +206,17 @@ export default function AuthCard({
               <img
                 src={profile.avatar_url}
                 alt={profile.full_name || 'User'}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/assets/avatar-placeholder.webp';
+                }}
                 className="w-full h-full object-cover rounded-3xl"
               />
             ) : (
-              <span>{(profile?.full_name || user.email || 'U')[0].toUpperCase()}</span>
+              <img
+                src="/assets/avatar-placeholder.webp"
+                alt="User"
+                className="w-full h-full object-cover rounded-3xl"
+              />
             )}
           </div>
 

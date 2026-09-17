@@ -39,7 +39,7 @@ export const metadata: Metadata = {
       'Ubah sampah jadi cuan dan karya bernilai dengan ekosistem Green Market, Upcycle, & Sustainable berbasis AI.',
     images: [
       {
-        url: '/og-image.jpg',
+        url: '/assets/og-image.webp',
         width: 1200,
         height: 630,
         alt: 'BumiKita: Green Market, Upcycle, & Sustainable',
@@ -51,13 +51,15 @@ export const metadata: Metadata = {
     title: 'BumiKita — Green Market, Upcycle, & Sustainable',
     description:
       'Platform ekonomi sirkular dan green market generasi muda berbasis kecerdasan buatan.',
-    images: ['/og-image.jpg'],
+    images: ['/assets/og-image.webp'],
   },
   alternates: {
     canonical: 'https://bumikita.web.id',
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: '/assets/logo-icon.webp',
+    shortcut: '/assets/logo-icon.webp',
+    apple: '/assets/logo-icon.webp',
   },
 };
 
@@ -67,6 +69,7 @@ const jsonLd = {
   name: 'BumiKita',
   alternateName: 'BumiKita — Green Market, Upcycle, & Sustainable',
   url: 'https://bumikita.web.id',
+  image: 'https://bumikita.web.id/assets/og-image.webp',
   description:
     'BumiKita: Green Market, Upcycle, & Sustainable. Platform ekonomi sirkular berbasis AI untuk mengubah sampah menjadi karya bernilai jual dan aksi nyata pelestarian lingkungan.',
   applicationCategory: 'EnvironmentalApplication',

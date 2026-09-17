@@ -140,10 +140,17 @@ function UserProfileForm({ initialProfile, email, userId }: UserProfileFormProps
               <img
                 src={initialProfile.avatar_url}
                 alt={initialProfile.full_name || 'User Avatar'}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/assets/avatar-placeholder.webp';
+                }}
                 className="w-full h-full object-cover"
               />
             ) : (
-              <User className="w-10 h-10 text-[#357A59]" />
+              <img
+                src="/assets/avatar-placeholder.webp"
+                alt="User Avatar"
+                className="w-full h-full object-cover"
+              />
             )}
           </div>
 

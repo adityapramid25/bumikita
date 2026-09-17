@@ -196,10 +196,13 @@ export default function GreenMarket() {
                 <div className="relative w-full h-56 rounded-2xl overflow-hidden bg-[#EAE5DC] mb-4 shadow-clay-inset">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={product.image}
+                    src={product.image || '/assets/product-placeholder.webp'}
                     alt={product.name}
                     loading="lazy"
                     decoding="async"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/assets/product-placeholder.webp';
+                    }}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
 

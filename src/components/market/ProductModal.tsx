@@ -55,8 +55,11 @@ export default function ProductModal() {
             <div className="relative w-full h-72 rounded-2xl overflow-hidden shadow-clay-card border border-white bg-[#EAE5DC]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={images[activeImageIndex] || product.image}
+                src={images[activeImageIndex] || product.image || '/assets/product-placeholder.webp'}
                 alt={product.name}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/assets/product-placeholder.webp';
+                }}
                 className="w-full h-full object-cover"
               />
               <div className="absolute top-3 left-3 bg-[#FAF8F5] px-3 py-1 rounded-full text-xs font-bold text-[#1A4D3A] shadow-sm flex items-center gap-1.5 border border-white">
@@ -78,7 +81,14 @@ export default function ProductModal() {
                     }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img} alt="thumb" className="w-full h-full object-cover" />
+                    <img
+                      src={img}
+                      alt="thumb"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/assets/product-placeholder.webp';
+                      }}
+                      className="w-full h-full object-cover"
+                    />
                   </button>
                 ))}
               </div>

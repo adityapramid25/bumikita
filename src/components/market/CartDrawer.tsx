@@ -229,8 +229,11 @@ export default function CartDrawer() {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={item.product.image}
+                    src={item.product.image || '/assets/product-placeholder.webp'}
                     alt={item.product.name}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/assets/product-placeholder.webp';
+                    }}
                     className="w-14 h-14 rounded-xl object-cover shadow-sm bg-[#EAE5DC] flex-shrink-0"
                   />
 

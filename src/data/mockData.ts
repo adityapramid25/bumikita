@@ -1,5 +1,14 @@
 import { Product, EcoQuest, CommunityPost, Workshop, DropoffLocation } from '@/src/types';
 
+export const ASSET_PATHS = {
+  logo: '/assets/logo.webp',
+  logoIcon: '/assets/logo-icon.webp',
+  banner: '/assets/banner.webp',
+  ogImage: '/assets/og-image.webp',
+  productPlaceholder: '/assets/product-placeholder.webp',
+  avatarPlaceholder: '/assets/avatar-placeholder.webp',
+};
+
 export const INITIAL_PRODUCTS: Product[] = [
   {
     id: 'prod-1',
