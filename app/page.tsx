@@ -9,7 +9,13 @@ import ImpactPartnerBar from '@/src/components/home/ImpactPartnerBar';
 
 export default function HomePage() {
   return (
-    <div className="w-full min-h-screen bg-[#F5F2ED] text-[#1A4D3A] space-y-10 sm:space-y-14 pb-24">
+    <div className="relative w-full max-w-[100vw] min-h-screen bg-[#F5F2ED] text-[#1A4D3A] space-y-10 sm:space-y-14 pb-24 overflow-x-hidden">
+      {/* Subtle Organic Eco-Dot Texture Pattern Overlay */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] bg-[radial-gradient(#1A4D3A_0.6px,transparent_0.6px)] [background-size:24px_24px] opacity-[0.06]"
+      />
+
       {/* 1. Split Asymmetrical Bento Hero + Live Interactive Scanner */}
       <HeroInteractiveScanner />
 

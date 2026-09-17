@@ -30,12 +30,12 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F5F2ED] text-[#1A4D3A]">
+    <div className="min-h-screen flex flex-col bg-[#F5F2ED] text-[#1A4D3A] overflow-x-hidden w-full max-w-[100vw]">
       {/* Sticky Claymorphic Top Navbar */}
       <Navbar />
 
       {/* Dynamic Route Page Body */}
-      <main className="flex-1 w-full">
+      <main className="flex-1 w-full max-w-[100vw] overflow-x-hidden">
         {children}
       </main>
 

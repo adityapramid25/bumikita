@@ -95,7 +95,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="bg-[#F5F2ED] text-[#1A4D3A] font-sans antialiased min-h-screen selection:bg-[#6DB677]/30 selection:text-[#1A4D3A]">
+      <body className="bg-[#F5F2ED] text-[#1A4D3A] font-sans antialiased min-h-screen selection:bg-[#6DB677]/30 selection:text-[#1A4D3A] overflow-x-hidden w-full max-w-[100vw] relative">
+        {/* Subtle Organic Eco-Dots Matrix Background Overlay */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 -z-10 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] bg-[radial-gradient(#1A4D3A_0.6px,transparent_0.6px)] [background-size:24px_24px] opacity-[0.06]"
+        />
         <AppShell>
           {children}
         </AppShell>
