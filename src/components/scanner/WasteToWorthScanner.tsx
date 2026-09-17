@@ -576,19 +576,10 @@ export default function WasteToWorthScanner() {
       {/* Header Banner */}
       <div className="bg-gradient-clay p-5 sm:p-7 rounded-3xl shadow-clay-card border border-white flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20 text-xs font-black uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 text-[#FF9E20]" />
-              AI Multimodal Camera Vision
-            </span>
-            <span className="text-xs font-semibold text-[#1A4D3A]/60 hidden sm:inline">
-              Powered by Qwen 2.5-VL via OpenRouter
-            </span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1A4D3A]">
             Waste-to-Worth <span className="text-[#357A59]">AI Scanner</span>
           </h1>
-          <p className="text-sm text-[#1A4D3A]/70 max-w-2xl mt-1">
+          <p className="text-sm text-[#1A4D3A]/70 max-w-2xl mt-1.5">
             Isolasi objek sampah secara otomatis, audit jenis material polimer, dan dapatkan 3 rekomendasi kreasi bernilai jual tinggi dengan blueprint pembuatan instan.
           </p>
         </div>
@@ -941,11 +932,7 @@ export default function WasteToWorthScanner() {
           <div className="bg-[#FAF8F5] p-5 sm:p-7 rounded-3xl shadow-clay-card border border-white space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1A4D3A]/10 pb-4">
               <div>
-                <span className="text-xs font-bold text-[#357A59] uppercase tracking-wider flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-[#357A59]" />
-                  Tahap 3: Smart Object Identifier & Material Audit
-                </span>
-                <h2 className="text-xl sm:text-2xl font-black text-[#1A4D3A] tracking-tight mt-0.5">
+                <h2 className="text-xl sm:text-2xl font-black text-[#1A4D3A] tracking-tight">
                   Identifikasi Cerdas & Spesifikasi Material
                 </h2>
               </div>
@@ -1135,10 +1122,6 @@ export default function WasteToWorthScanner() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-[#357A59] uppercase tracking-wider flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-[#357A59]" />
-                  Tahap 4 & 5: Pilih 1 dari 3 Rekomendasi Kreasi
-                </span>
                 <h2 className="text-xl sm:text-2xl font-black text-[#1A4D3A] tracking-tight">
                   Katalog Ide Produk Upcycle
                 </h2>
@@ -1228,17 +1211,12 @@ export default function WasteToWorthScanner() {
             <div className="bg-[#FAF8F5] p-6 sm:p-8 rounded-3xl shadow-clay-card border border-white space-y-7 animate-in fade-in duration-300">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1A4D3A]/10 pb-5">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-3 py-0.5 rounded-full text-xs font-black bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20">
-                      BLUEPRINT AKTIF
-                    </span>
-                    <span className="text-xs font-bold text-[#1A4D3A]/60">
-                      Tingkat: {activeRec.difficulty} • {activeRec.estimatedTime}
-                    </span>
-                  </div>
                   <h2 className="text-2xl sm:text-3xl font-black text-[#1A4D3A] tracking-tight">
                     {activeRec.title}
                   </h2>
+                  <p className="text-xs font-semibold text-[#1A4D3A]/70 mt-1">
+                    Tingkat: {activeRec.difficulty} • Waktu: {activeRec.estimatedTime}
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2 self-start md:self-auto">

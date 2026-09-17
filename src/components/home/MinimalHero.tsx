@@ -17,14 +17,6 @@ export default function MinimalHero() {
     <section className="relative w-full pt-10 pb-16 sm:pt-14 sm:pb-20 px-4 sm:px-6">
       <div className="max-w-5xl mx-auto">
         <div className="relative clay-card p-8 sm:p-14 lg:p-16 overflow-hidden">
-          {/* Floating Mini Badge: Quota docked at top right */}
-          <div className="absolute top-6 right-6 sm:top-8 sm:right-8">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EBF4EE] text-[#1A4D3A] text-xs font-bold tracking-tight shadow-clay-pill">
-              <span className="w-2 h-2 rounded-full bg-[#357A59]" />
-              <span>Quota: 5/5</span>
-            </div>
-          </div>
-
           <div className="max-w-2xl space-y-6">
             {/* Headline: Exactly 6 words */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#1A4D3A] tracking-tight leading-[1.1]">

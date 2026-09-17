@@ -15,10 +15,7 @@ export default function CuratedShowcase() {
   return (
     <section className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16 space-y-10">
       {/* Section Title */}
-      <div className="text-center space-y-1">
-        <span className="text-xs font-bold text-[#357A59] tracking-wider uppercase">
-          Karya Pilihan
-        </span>
+      <div className="text-center">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1A4D3A] tracking-tight">
           Kreasi Unggulan Siswa
         </h2>

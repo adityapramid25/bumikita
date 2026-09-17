@@ -109,10 +109,6 @@ export default function EcoQuestsAndForest() {
       <div className="bg-[#FAF8F5] rounded-[32px] p-6 sm:p-10 shadow-clay-card border border-white space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EBF4EE] border border-[#6DB677]/40 text-[#1A4D3A] text-xs font-bold shadow-clay-sm">
-              <TreePine className="w-3.5 h-3.5 text-[#357A59]" />
-              <span>Program Restorasi Hutan & Pesisir BumiKita</span>
-            </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1A4D3A] tracking-tight">
               Hutan Virtual & Pohon Nyata Ber-GPS
             </h2>
@@ -246,10 +242,6 @@ export default function EcoQuestsAndForest() {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#E8F2ED] text-[#357A59] text-xs font-bold mb-1">
-              <Coins className="w-3.5 h-3.5" />
-              <span>Sumber Utama Daun Poin</span>
-            </div>
             <h3 className="text-xl sm:text-2xl font-extrabold text-[#1A4D3A] tracking-tight">
               Misi Harian Daun (Daily Missions)
             </h3>

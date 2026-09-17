@@ -18,10 +18,7 @@ export default function ProfitCalculator() {
     <section className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       <div className="clay-card p-8 sm:p-12 lg:p-14 space-y-10">
         {/* Section Header: Minimalist */}
-        <div className="space-y-1">
-          <span className="text-xs font-bold text-[#357A59] tracking-wider uppercase">
-            Simulasi Cuan
-          </span>
+        <div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1A4D3A] tracking-tight">
             Kalkulator Modal & Untung
           </h2>

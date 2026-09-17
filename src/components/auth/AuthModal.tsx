@@ -59,13 +59,8 @@ export default function AuthModal() {
               <span>← Kembali ke Beranda</span>
             </button>
 
-            {/* Top-Right: Tactile Clay "X" Button + Security Badge */}
+            {/* Top-Right: Tactile Clay "X" Button */}
             <div className="flex items-center gap-3">
-              <div className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FAF8F5] border border-white text-[#357A59] text-xs font-bold shadow-clay-sm">
-                <ShieldCheck className="w-4 h-4 text-[#357A59]" />
-                <span>Supabase PostgreSQL Enkripsi</span>
-              </div>
-
               <button
                 type="button"
                 onClick={closeAuthModal}

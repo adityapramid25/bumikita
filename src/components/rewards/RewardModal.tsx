@@ -130,10 +130,6 @@ export default function RewardModal() {
         {/* Modal Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1A4D3A]/10 pb-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFF5E6] border border-[#FF9E20]/30 text-[#D97E0D] text-xs font-bold shadow-clay-sm">
-              <Gift className="w-3.5 h-3.5" />
-              <span>Tukar Daun Points</span>
-            </div>
             <h3 className="text-xl sm:text-2xl font-extrabold text-[#1A4D3A]">
               Pusat Penukaran Reward Eco
             </h3>

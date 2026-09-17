@@ -88,10 +88,6 @@ export default function GreenMarket() {
       {/* Market Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EBF4EE] border border-[#6DB677]/40 text-[#1A4D3A] text-xs font-bold shadow-clay-sm">
-            <ShoppingBag className="w-3.5 h-3.5 text-[#357A59]" />
-            <span>Curated Circular Marketplace</span>
-          </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1A4D3A] tracking-tight">
             Green Market Gen-Z
           </h2>

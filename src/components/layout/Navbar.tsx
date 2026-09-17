@@ -21,7 +21,7 @@ import {
 const NAV_LINKS = [
   { href: '/', label: 'Beranda', icon: Home },
   { href: '/market', label: 'Market', icon: ShoppingBag },
-  { href: '/scanner', label: 'AI Scanner', icon: Sparkles, badge: 'AI' },
+  { href: '/scanner', label: 'AI Scanner', icon: Sparkles },
   { href: '/community', label: 'Community', icon: Users },
   { href: '/quests', label: 'Hutan & Quest', icon: TreePine },
   { href: '/dropoff', label: 'Drop-off Map', icon: MapPin },
@@ -99,13 +99,8 @@ export default function Navbar() {
                     : 'text-[#1A4D3A]/80 hover:text-[#1A4D3A] hover:bg-[#EAE5DC]/60'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${link.badge ? 'text-[#FF9E20] fill-[#FF9E20]' : ''}`} />
+                <Icon className="w-3.5 h-3.5" />
                 <span>{link.label}</span>
-                {link.badge && (
-                  <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-full ${active ? 'bg-[#FF9E20] text-white' : 'bg-[#FF9E20] text-white'}`}>
-                    {link.badge}
-                  </span>
-                )}
               </Link>
             );
           })}
@@ -249,13 +244,8 @@ export default function Navbar() {
                   : 'bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-pill border border-white/70'
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${link.badge && !active ? 'text-[#FF9E20]' : ''}`} />
+              <Icon className="w-3.5 h-3.5" />
               <span>{link.label}</span>
-              {link.badge && (
-                <span className="bg-[#FF9E20] text-white text-[8px] font-black px-1 rounded-full">
-                  {link.badge}
-                </span>
-              )}
             </Link>
           );
         })}

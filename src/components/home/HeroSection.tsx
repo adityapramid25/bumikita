@@ -33,19 +33,6 @@ export default function HeroSection() {
       <div className="max-w-7xl mx-auto">
         {/* Main Hero Card Container */}
         <div className="bg-[#FAF8F5] rounded-[32px] p-6 sm:p-10 lg:p-12 shadow-clay-card border border-white/80 relative overflow-hidden">
-          {/* Top Badge Pill */}
-          <div className="flex flex-wrap items-center gap-2.5 mb-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#EBF4EE] border border-[#6DB677]/40 text-[#1A4D3A] text-xs font-bold shadow-clay-sm">
-              <span className="flex h-2 w-2 rounded-full bg-[#6DB677] animate-ping" />
-              <span>Platform No.1 Circular Economy Gen-Z Indonesia</span>
-            </div>
-
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF5E6] border border-[#FF9E20]/30 text-[#D97E0D] text-xs font-bold shadow-clay-sm">
-              <Flame className="w-3.5 h-3.5 fill-[#FF9E20] text-[#FF9E20]" />
-              <span>100% Student & Artisan Made</span>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Left Content Column */}
             <div className="lg:col-span-7 space-y-6">

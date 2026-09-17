@@ -70,17 +70,12 @@ export default function PrivacyPolicyPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#EBF4EE] border border-white text-[#357A59] text-xs font-bold shadow-clay-sm">
-              <ShieldCheck className="w-4 h-4 text-[#357A59]" />
-              <span className="hidden sm:inline">Kepatuhan UU PDP No. 27/2022</span>
-              <span className="sm:hidden">UU PDP</span>
-            </div>
             <button
               type="button"
               onClick={() => {
                 if (typeof window !== 'undefined') window.print();
               }}
-              className="hidden sm:flex items-center justify-center w-9 h-9 rounded-2xl bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-card border border-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              className="flex items-center justify-center w-9 h-9 rounded-2xl bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-card border border-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
               title="Cetak Salinan Kebijakan"
             >
               <Printer className="w-4 h-4 text-[#357A59]" />
@@ -90,11 +85,6 @@ export default function PrivacyPolicyPage() {
 
         {/* Hero Title Card */}
         <div className="clay-card p-6 sm:p-10 border border-white space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EBF4EE] text-[#357A59] text-xs font-extrabold shadow-clay-sm">
-            <Leaf className="w-3.5 h-3.5 text-[#357A59]" />
-            <span>Transparansi & Perlindungan Data Pengguna</span>
-          </div>
-
           <div className="space-y-2">
             <h1 className="text-2xl sm:text-4xl font-black text-[#1A4D3A] tracking-tight leading-tight">
               Kebijakan Privasi BumiKita

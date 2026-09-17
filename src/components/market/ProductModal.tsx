@@ -87,18 +87,6 @@ export default function ProductModal() {
 
           {/* Details Column */}
           <div className="md:col-span-6 space-y-4">
-            {/* Eco Badges */}
-            <div className="flex flex-wrap gap-1.5">
-              {product.ecoTags.map((tag, idx) => (
-                <span
-                  key={idx}
-                  className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-
             <h2 className="text-xl sm:text-2xl font-extrabold text-[#1A4D3A] leading-tight">
               {product.name}
             </h2>
@@ -113,6 +101,18 @@ export default function ProductModal() {
                   Rp {product.originalPrice.toLocaleString('id-ID')}
                 </span>
               )}
+            </div>
+
+            {/* Eco Tags */}
+            <div className="flex flex-wrap gap-1.5">
+              {product.ecoTags.map((tag, idx) => (
+                <span
+                  key={idx}
+                  className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#E8F2ED] text-[#357A59] border border-[#357A59]/20"
+                >
+                  {tag}
+                </span>
+              ))}
             </div>
 
             <p className="text-xs sm:text-sm text-[#1A4D3A]/75 leading-relaxed">

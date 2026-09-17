@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Leaf, Heart, Globe, Droplet, Sparkles, MapPin, TreePine, ShoppingBag, Users } from 'lucide-react';
+import { Leaf, Heart, Globe, Droplet, Sparkles, MapPin, TreePine, ShoppingBag, Users, School } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -90,23 +90,19 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Student Chapter Network */}
+          {/* School Partnership & Pilot */}
           <div className="md:col-span-3 space-y-3">
             <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#1A4D3A]/50">
-              Jaringan Kampus & Komunitas
+              Mitra Sekolah & Pengembangan
             </h4>
-            <p className="text-xs text-[#1A4D3A]/70">
-              Bergabung dengan 28+ Eco Chapter mahasiswa aktif di kampus-kampus ternama:
+            <p className="text-xs text-[#1A4D3A]/70 leading-relaxed">
+              Saat ini berkolaborasi aktif dalam program daur ulang dan Adiwiyata bersama SMK Negeri 9 Semarang.
             </p>
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {['UI Depok', 'ITB Bandung', 'UGM Yogyakarta', 'ITS Surabaya', 'Undip Semarang', 'Unair', 'Unud Bali', 'Unpad Jatinangor'].map((camp) => (
-                <span
-                  key={camp}
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-sm border border-white"
-                >
-                  {camp}
-                </span>
-              ))}
+            <div className="pt-0.5">
+              <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-card border border-white">
+                <School className="w-4 h-4 text-[#357A59] shrink-0" />
+                <span>SMK Negeri 9 Semarang (Pilot Project)</span>
+              </div>
             </div>
           </div>
 
@@ -127,12 +123,18 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-6 border-t border-[#1A4D3A]/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[#1A4D3A]/60 font-semibold">
-          <p>© 2026 BumiKita. Hak Cipta Dilindungi. Dibuat dengan cinta untuk bumi Indonesia.</p>
-          <div className="flex items-center gap-4">
+        <div className="pt-6 border-t border-[#1A4D3A]/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#1A4D3A]/70">
+          <p>
+            © 2026 BumiKita. Hak Cipta Dilindungi. Dikembangkan oleh{' '}
+            <span className="font-semibold text-[#1A4D3A] hover:text-[#357A59] transition-colors">
+              Tim Smartova
+            </span>{' '}
+            untuk bumi Indonesia.
+          </p>
+          <div className="flex items-center gap-4 text-xs font-medium">
             <Link href="/quests" className="hover:text-[#357A59] transition-colors">Panduan Zero Waste</Link>
             <Link href="/privacy-policy" className="hover:text-[#357A59] transition-colors">Kebijakan Privasi</Link>
-            <Link href="/community" className="hover:text-[#357A59] transition-colors">Mitra Kampus</Link>
+            <Link href="/community" className="hover:text-[#357A59] transition-colors">Mitra Sekolah</Link>
           </div>
         </div>
       </div>

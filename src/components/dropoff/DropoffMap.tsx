@@ -59,10 +59,6 @@ export default function DropoffMap() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EBF4EE] border border-[#6DB677]/40 text-[#1A4D3A] text-xs font-bold shadow-clay-sm">
-            <MapPin className="w-3.5 h-3.5 text-[#357A59]" />
-            <span>Campus & City Eco Hub Locator</span>
-          </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1A4D3A] tracking-tight">
             Titik Drop-off & Smart Reverse Vending
           </h2>

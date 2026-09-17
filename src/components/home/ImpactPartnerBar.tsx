@@ -26,10 +26,10 @@ export default function ImpactPartnerBar() {
 
           <div className="py-3 md:py-0 md:px-6">
             <p className="text-2xl sm:text-3xl font-black text-[#1A4D3A] tracking-tight">
-              48 Sekolah
+              SMKN 9
             </p>
             <p className="text-xs font-bold text-[#1A4D3A]/60 mt-1 uppercase tracking-wider">
-              Sekolah Mitra
+              Pilot Project Semarang
             </p>
           </div>
 
@@ -47,12 +47,12 @@ export default function ImpactPartnerBar() {
         <div className="pt-6 border-t border-[#1A4D3A]/10 flex flex-wrap items-center justify-center gap-8 sm:gap-14 opacity-40 grayscale hover:opacity-70 transition-opacity">
           <div className="flex items-center gap-2 text-[#1A4D3A]">
             <GraduationCap className="w-6 h-6" />
-            <span className="font-mono text-xs font-extrabold tracking-widest">SMKN 1</span>
+            <span className="font-mono text-xs font-extrabold tracking-widest">SMKN 9 SEMARANG</span>
           </div>
 
           <div className="flex items-center gap-2 text-[#1A4D3A]">
             <School className="w-6 h-6" />
-            <span className="font-mono text-xs font-extrabold tracking-widest">POLTEK</span>
+            <span className="font-mono text-xs font-extrabold tracking-widest">ADIWIYATA</span>
           </div>
 
           <div className="flex items-center gap-2 text-[#1A4D3A]">
@@ -67,7 +67,7 @@ export default function ImpactPartnerBar() {
 
           <div className="flex items-center gap-2 text-[#1A4D3A]">
             <ShieldCheck className="w-6 h-6" />
-            <span className="font-mono text-xs font-extrabold tracking-widest">KAMPUS-MERDEKA</span>
+            <span className="font-mono text-xs font-extrabold tracking-widest">PILOT PROJECT</span>
           </div>
         </div>
       </div>

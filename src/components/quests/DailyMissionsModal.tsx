@@ -152,17 +152,6 @@ export default function DailyMissionsModal() {
           {/* Header Strip */}
           <div className="flex items-start justify-between gap-4 pb-4 border-b border-[#1A4D3A]/10">
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full bg-[#E8F2ED] text-[#357A59] text-xs font-black tracking-wide border border-[#357A59]/20 flex items-center gap-1.5 shadow-clay-sm">
-                  <Coins className="w-3.5 h-3.5" />
-                  Misi Harian Daun
-                </span>
-                <span className="text-[11px] font-bold text-[#FF9E20] flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Reset Tiap Hari
-                </span>
-              </div>
-
               <h2 className="text-xl sm:text-2xl font-black text-[#1A4D3A] tracking-tight">
                 Klaim Daun Gratis & Bangun Hutan
               </h2>

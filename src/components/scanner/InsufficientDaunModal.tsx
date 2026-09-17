@@ -121,10 +121,6 @@ export default function InsufficientDaunModal() {
             🍂
           </div>
           <div className="space-y-1 pr-6">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FFF5E6] border border-[#FF9E20]/30 text-[#D97E0D] text-[11px] font-black uppercase tracking-wider">
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span>Biaya AI Scanner: 50 Daun</span>
-            </div>
             <h3 className="text-xl sm:text-2xl font-black text-[#1A4D3A] tracking-tight">
               Daun Poin Tidak Cukup
             </h3>
