@@ -20,46 +20,9 @@ import {
   Award
 } from 'lucide-react';
 
-interface EcoBadgeProps {
-  variant?: 'green' | 'light' | 'warm';
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-  className?: string;
-  uppercase?: boolean;
-}
-
-function EcoBadge({
-  variant = 'green',
-  icon,
-  children,
-  className = '',
-  uppercase = false,
-}: EcoBadgeProps) {
-  const variantStyles = {
-    // Category A: Status / Verified (Green Theme)
-    green: 'bg-[#EBF7F2] text-[#1A4D3A] border border-[#6DB677]/10',
-    // Category B: Informational / Project Type (Light Theme)
-    light: 'bg-[#FAFBF9] text-[#357A59] border border-[#357A59]/10',
-    // Category C: Highlight / Partnerships (Warm Theme)
-    warm: 'bg-[#FFF8F0] text-[#996D00] border border-[#CC9900]/10',
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold tracking-wider shadow-clay-inset select-none ${
-        uppercase ? 'uppercase' : ''
-      } ${variantStyles[variant]} ${className}`}
-    >
-      {icon}
-      <span>{children}</span>
-    </span>
-  );
-}
-
 export default function DropoffMap() {
   const { addDaunPoints } = useEco();
 
-  const [activeFilter, setActiveFilter] = useState<'all' | 'semarang'>('all');
   const [pilotLocation] = useState<DropoffLocation>(INITIAL_DROPOFF_LOCATIONS[0]);
   const [depositModalOpen, setDepositModalOpen] = useState(false);
   const [depositSuccess, setDepositSuccess] = useState(false);
@@ -107,15 +70,9 @@ export default function DropoffMap() {
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-16 space-y-8">
-      {/* 1. Header & Subtitle Refinement */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-[#1A4D3A]/10">
-        <div className="space-y-2">
-          <EcoBadge
-            variant="light"
-            icon={<Leaf className="w-3.5 h-3.5 shrink-0 text-[#357A59]" />}
-          >
-            Pilot Project Ekonomi Sirkular
-          </EcoBadge>
+      {/* 1. Header & Subtitle */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-[#1A4D3A]/10">
+        <div className="space-y-1.5">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A4D3A] tracking-tight">
             Titik Drop-off Sampah & Bank Sampah
           </h1>
@@ -124,79 +81,31 @@ export default function DropoffMap() {
           </p>
         </div>
 
-        {/* 2. City Filter Chips & Expansion Note */}
-        <div className="flex flex-col sm:items-end gap-2 shrink-0">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveFilter('all')}
-              className={`px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold tracking-wider transition-all cursor-pointer ${
-                activeFilter === 'all'
-                  ? 'bg-[#1A4D3A] text-white shadow-clay-button'
-                  : 'bg-[#FAFBF9] text-[#1A4D3A]/75 shadow-clay-inset border border-[#357A59]/10 hover:bg-[#FAF8F5]'
-              }`}
-            >
-              Semua Titik (1)
-            </button>
-            <button
-              onClick={() => setActiveFilter('semarang')}
-              className={`px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeFilter === 'semarang'
-                  ? 'bg-[#EBF7F2] text-[#1A4D3A] border border-[#6DB677]/10 shadow-clay-inset'
-                  : 'bg-[#FAFBF9] text-[#1A4D3A]/70 shadow-clay-inset border border-[#357A59]/10 hover:bg-[#FAF8F5]'
-              }`}
-            >
-              <Leaf className="w-3.5 h-3.5 shrink-0 text-[#357A59]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Semarang (Aktif)</span>
-            </button>
-          </div>
-          <p className="text-[11px] font-semibold text-[#1A4D3A]/60 italic">
-            * Ekspansi ke sekolah & kampus lain segera hadir.
-          </p>
+        {/* Location Counter Pill */}
+        <div className="flex items-center shrink-0">
+          <span className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#FAF8F5] text-[#1A4D3A] shadow-clay-sm border border-white">
+            Semua Titik (1)
+          </span>
         </div>
       </div>
 
-      {/* 3. Active Pilot Location Card (Tactile Clay Design) */}
+      {/* 2. Active Pilot Location Card (Tactile Clay Design) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Main Details Card */}
         <div className="lg:col-span-7 bg-[#FCFBF8] rounded-3xl p-5 sm:p-7 shadow-clay-card border border-white/80 space-y-6">
-          {/* Top Bar: Badge & Reward Rate */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#1A4D3A]/10">
-            <div className="flex items-center gap-2 flex-wrap">
-              <EcoBadge
-                variant="green"
-                uppercase
-                icon={<Leaf className="w-3.5 h-3.5 shrink-0 text-[#357A59]" />}
-              >
-                PILOT ADIWIYATA SMKN 9
-              </EcoBadge>
-              <EcoBadge
-                variant="green"
-                icon={
-                  <span className="flex items-center gap-1.5">
-                    <Leaf className="w-3.5 h-3.5 shrink-0 text-[#357A59]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  </span>
-                }
-              >
-                Aktif & Beroperasi
-              </EcoBadge>
+          {/* Location Title, Category & Inline Reward Rate */}
+          <div className="space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#357A59]">
+                <School className="w-4 h-4 text-[#357A59] shrink-0" />
+                <span>Sekolah Menengah Kejuruan Negeri 9 Semarang</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-[#1A4D3A]">
+                <span className="text-[#1A4D3A]/60 font-medium">Reward Rate:</span>
+                <span className="font-extrabold text-[#357A59]">+50 Daun/kg</span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-1.5 bg-[#FAF8F5] px-3.5 py-1.5 rounded-full shadow-clay-inset border border-white">
-              <span className="text-[11px] sm:text-xs font-semibold text-[#1A4D3A]/60">Reward Rate:</span>
-              <span className="text-xs sm:text-sm font-black text-[#1A4D3A]">
-                +50 Daun/kg
-              </span>
-            </div>
-          </div>
-
-          {/* Location Title & Category */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#357A59]">
-              <School className="w-4 h-4 text-[#357A59]" />
-              <span>Sekolah Menengah Kejuruan Negeri 9 Semarang</span>
-            </div>
             <h2 className="text-xl sm:text-2xl font-black text-[#1A4D3A] tracking-tight">
               EcoDrop Hub & Bank Sampah — SMK Negeri 9 Semarang
             </h2>
@@ -280,52 +189,25 @@ export default function DropoffMap() {
         <div className="lg:col-span-5 space-y-6">
           {/* Visual Interactive Map Preview Card */}
           <div className="bg-[#FAF8F5] rounded-3xl p-5 sm:p-6 shadow-clay-card border border-white space-y-4">
-            <div className="flex items-center justify-between">
+            <div>
               <span className="text-xs font-extrabold text-[#1A4D3A] uppercase tracking-wider">
                 Peta Lokasi Hub
               </span>
-              <EcoBadge
-                variant="green"
-                icon={<Leaf className="w-3.5 h-3.5 shrink-0 text-[#357A59]" />}
-              >
-                GPS Terverifikasi
-              </EcoBadge>
             </div>
 
             {/* Stylized Visual Pin Frame */}
             <div className="relative w-full h-56 rounded-2xl bg-gradient-to-br from-[#EAE5DC] via-[#E8F2ED] to-[#FAF8F5] shadow-clay-inset border border-white overflow-hidden p-4 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <EcoBadge
-                  variant="green"
-                  icon={
-                    <span className="flex items-center gap-1.5">
-                      <Leaf className="w-3.5 h-3.5 shrink-0 text-[#357A59]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                    </span>
-                  }
-                >
-                  Semarang Selatan
-                </EcoBadge>
-                <EcoBadge
-                  variant="light"
-                  uppercase
-                  icon={<Leaf className="w-3.5 h-3.5 shrink-0 text-[#357A59]" />}
-                >
-                  SMKN 9 PILOT
-                </EcoBadge>
-              </div>
-
               {/* Center Map Graphic / Marker */}
-              <div className="text-center space-y-1 my-auto">
+              <div className="text-center space-y-1.5 my-auto">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-earth text-white flex items-center justify-center mx-auto shadow-clay-green text-2xl animate-bounce">
                   🏫
                 </div>
-                <div className="inline-block bg-[#FAF8F5] px-3 py-1 rounded-full shadow-clay-sm border border-white/80">
+                <div className="inline-block bg-[#FAF8F5] px-3.5 py-1 rounded-full shadow-clay-sm border border-white/80">
                   <p className="text-xs font-black text-[#1A4D3A]">
                     SMK Negeri 9 Semarang
                   </p>
                 </div>
-                <p className="text-[10px] font-semibold text-[#1A4D3A]/65">
+                <p className="text-[11px] font-semibold text-[#1A4D3A]/65">
                   Kec. Semarang Selatan, Kota Semarang
                 </p>
               </div>
@@ -362,13 +244,7 @@ export default function DropoffMap() {
 
       {/* 4. Empty State / Suggest Next Location Teaser Card */}
       <div className="bg-[#FAF8F5] rounded-3xl p-6 sm:p-8 shadow-clay-card border border-white text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-6">
-        <div className="space-y-2 max-w-2xl">
-          <EcoBadge
-            variant="warm"
-            icon={<Building2 className="w-3.5 h-3.5 shrink-0 text-[#996D00]" />}
-          >
-            Kemitraan Komunitas & Sekolah
-          </EcoBadge>
+        <div className="space-y-1.5 max-w-2xl">
           <h3 className="text-lg sm:text-xl font-black text-[#1A4D3A]">
             Ingin sekolah atau kampusmu jadi titik EcoDrop berikutnya?
           </h3>
@@ -494,13 +370,10 @@ export default function DropoffMap() {
             ) : (
               <form onSubmit={handlePartnerSubmit} className="space-y-4 text-left">
                 <div>
-                  <EcoBadge
-                    variant="warm"
-                    className="mb-2"
-                    icon={<School className="w-3.5 h-3.5 shrink-0 text-[#996D00]" />}
-                  >
-                    Formulir Calon Titik Hub
-                  </EcoBadge>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#357A59] mb-1">
+                    <School className="w-3.5 h-3.5 shrink-0 text-[#357A59]" />
+                    <span>Formulir Calon Titik Hub</span>
+                  </div>
                   <h3 className="text-lg font-black text-[#1A4D3A]">
                     Ajukan Kemitraan Titik EcoDrop
                   </h3>
